@@ -67,6 +67,15 @@ export function prefill(d, session, ex, setIndex) {
   if (last) {
     const base = last.sets.find((s) => s.setIndex === setIndex) || last.sets[last.sets.length - 1];
     v = setValues(ex, base);
+    if (ex.kind === 'pullup' && base.weight > 0) v.weight = base.weight;
+  }
+  if (ex.kind === 'pullup') {
+    // Once the ladder reaches the weighted stage, start from the goal (for example 5 x 4 at +2.5 kg).
+    const g = pullupGoal(d, ex, session.id);
+    if (g.weight > (v.weight || 0)) {
+      v.weight = g.weight;
+      v.cleanReps = g.reps;
+    }
   }
   if (ex.kind === 'weighted') {
     const prev = setsOf(session, ex)
@@ -79,6 +88,38 @@ export function prefill(d, session, ex, setIndex) {
     }
   }
   return v;
+}
+
+// ---- Strict pull-up ladder ----
+
+// Goal is 5 sets of N clean reps, starting at N = 4. When every set reaches N, the goal becomes N + 1.
+// After 5 x 6 is completed, the next goal is weighted pull-ups: +2.5 kg with the target reset to 5 x 4.
+export function pullupGoal(d, ex, excludeId) {
+  const base = ex.repMin || 4;
+  const hist = historyFor(d, ex.key, excludeId).slice().reverse(); // oldest first
+  let n = base;
+  let w = 0;
+  let before = { n, w };
+  let changed = false;
+  for (const { sets } of hist) {
+    before = { n, w };
+    const need = sets.slice(0, ex.sets);
+    const ok = need.length >= ex.sets && need.every((s) => s.cleanReps >= n && (s.weight || 0) >= w);
+    changed = ok;
+    if (ok) {
+      if (n >= 6) {
+        n = base;
+        w = round2(w + 2.5);
+      } else {
+        n += 1;
+      }
+    }
+  }
+  const lastSets = hist.length ? hist[hist.length - 1].sets : [];
+  const lastAt = Math.max(0, ...lastSets.map((s) => s.completedAt || 0));
+  // Gap rule: after more than 10 days away, do not raise the goal.
+  if (changed && Date.now() - lastAt > 10 * DAY) return { sets: ex.sets, reps: before.n, weight: before.w };
+  return { sets: ex.sets, reps: n, weight: w };
 }
 
 export const hasHistory = (d, session, ex) => historyFor(d, ex.key, session.id).length > 0;
@@ -180,3 +221,70 @@ export function sessionMinutes(session) {
   const end = last || session.finishedAt || Date.now();
   return Math.max(1, Math.round((end - session.startedAt) / 60000));
 }
+
+// ---- Progress metrics ----
+
+// One number per session for the progress charts.
+export function sessionMetric(ex, sets) {
+  if (!sets.length) return 0;
+  switch (ex.kind) {
+    case 'pullup':
+      return Math.max(0, ...sets.map((s) => s.cleanReps || 0));
+    case 'weighted':
+      return bestValue(ex, sets);
+    case 'time':
+      return Math.max(0, ...sets.map((s) => s.seconds || 0));
+    default:
+      return ex.key === 'push-ups'
+        ? sets.reduce((sum, s) => sum + (s.reps || 0), 0)
+        : Math.max(0, ...sets.map((s) => s.reps || 0));
+  }
+}
+
+export function metricLabel(ex) {
+  switch (ex.kind) {
+    case 'pullup':
+      return 'Clean reps, best set';
+    case 'weighted':
+      return 'Weight in kg, best set';
+    case 'time':
+      return 'Hold in seconds, best set';
+    default:
+      return ex.key === 'push-ups' ? 'Total reps per session' : 'Reps, best set';
+  }
+}
+
+// Chronological [{ t, v, session, sets }] over finished sessions.
+export function metricSeries(d, ex) {
+  const out = [];
+  for (const { session, sets } of historyFor(d, ex.key).reverse()) {
+    const v = sessionMetric(ex, sets);
+    if (v > 0) out.push({ t: session.finishedAt, v, session, sets });
+  }
+  return out;
+}
+
+// Exercises with logged history, in plan order. Exercises removed from the plan keep their history.
+export function trackedExercises(d) {
+  const defs = new Map();
+  for (const ps of d.plan.sessions) for (const e of ps.exercises) if (!defs.has(e.key)) defs.set(e.key, e);
+  for (const s of d.sessions.slice().sort((a, b) => b.startedAt - a.startedAt)) {
+    for (const e of s.exercises) if (!defs.has(e.key)) defs.set(e.key, e);
+  }
+  const logged = new Set(doneSessions(d).flatMap((s) => s.sets.map((x) => x.exerciseKey)));
+  return [...defs.values()].filter((e) => e.trackBest !== false && logged.has(e.key));
+}
+
+export function findExercise(d, key) {
+  for (const ps of d.plan.sessions) {
+    const e = ps.exercises.find((x) => x.key === key);
+    if (e) return e;
+  }
+  for (const s of d.sessions) {
+    const e = s.exercises.find((x) => x.key === key);
+    if (e) return e;
+  }
+  return null;
+}
+
+export const latestBodyweight = (d) => (d.bodyweight.length ? d.bodyweight[d.bodyweight.length - 1] : null);

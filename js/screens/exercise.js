@@ -11,6 +11,8 @@ import {
   hasHistory,
   tryWeight,
   bestFor,
+  pullupGoal,
+  historyFor,
 } from '../progression.js';
 import { logSet, updateSet, deleteSet } from '../actions.js';
 import * as rest from '../rest.js';
@@ -24,13 +26,15 @@ let editing = null;
 
 const draftKey = (sid, ex, i) => `${sid}:${ex.id}:${i}`;
 
-function fieldsFor(ex) {
+function fieldsFor(ex, weightedPullups) {
   switch (ex.kind) {
     case 'pullup':
     case 'easy':
       return [
         { label: 'Clean', prop: 'cleanReps' },
         { label: 'Partial', prop: 'partialReps' },
+        // Added weight appears once the pull-up ladder reaches the weighted stage.
+        ...(weightedPullups ? [{ label: 'Added kg', prop: 'weight', step: 2.5, decimal: true }] : []),
       ];
     case 'weighted':
       return [
@@ -72,6 +76,9 @@ export function exercise({ sid, exId }) {
   const historyExists = hasHistory(d, session, ex);
   const best = bestFor(d, ex);
   const hintWeight = tryWeight(d, session, ex);
+  const weightedPullups =
+    ex.kind === 'pullup' &&
+    (pullupGoal(d, ex, session.id).weight > 0 || setsOf(session, ex).some((s) => s.weight > 0) || historyFor(d, ex.key, session.id).some((x) => x.sets.some((s) => s.weight > 0)));
 
   // ---- Rows ----
 
@@ -84,8 +91,8 @@ export function exercise({ sid, exId }) {
   const steppers = (draft, onWeightChange) =>
     h(
       'div',
-      { class: 'fields' },
-      fieldsFor(ex).map((f) =>
+      { class: 'fields' + (weightedPullups ? ' wrap' : '') },
+      fieldsFor(ex, weightedPullups).map((f) =>
         stepper({
           label: f.label,
           value: draft[f.prop],

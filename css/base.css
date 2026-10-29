@@ -373,6 +373,12 @@ button.row:active {
   display: flex;
   gap: 12px;
 }
+.fields.wrap {
+  flex-wrap: wrap;
+}
+.fields.wrap .field {
+  flex: 1 1 calc(50% - 6px);
+}
 .field {
   flex: 1;
   min-width: 0;
@@ -580,4 +586,224 @@ button.row:active {
     clip-path: none;
     animation: none;
   }
+}
+
+/* ---- Phase 2 components ---- */
+
+.block {
+  display: block;
+}
+.center-text {
+  text-align: center;
+}
+.between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.row.top-line,
+.list-plain .row + .row {
+  border-top: 0.5px solid var(--sep);
+}
+.row.stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.row.split {
+  padding: 0;
+  gap: 0;
+}
+.row-main {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--hit);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: var(--row-py) 0 var(--row-py) var(--row-px);
+  text-align: left;
+}
+.row-plus {
+  width: var(--hit);
+  height: var(--hit);
+  margin-right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card.compact {
+  padding: 14px 16px;
+}
+.week.wide {
+  margin-top: 10px;
+}
+.week.wide span {
+  flex: 1;
+  width: auto;
+}
+.value {
+  min-width: 64px;
+  text-align: right;
+}
+.spark {
+  display: inline-flex;
+}
+.spark-empty {
+  width: 36px;
+}
+
+/* Segmented control */
+.seg {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 20px;
+  font-size: var(--fs-secondary);
+  text-align: center;
+}
+.seg button {
+  flex: 1;
+  min-height: 38px;
+  padding: 0 8px;
+  border-radius: 17px;
+  color: var(--text-2);
+  transition: background var(--t-fast);
+}
+.seg button.on {
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--white);
+}
+
+/* Charts */
+.chart-x {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--fs-caption);
+  color: var(--text-2);
+  margin-top: 4px;
+}
+.chart-empty {
+  padding: 28px 0 20px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: var(--fs-secondary);
+}
+.card .label {
+  margin-bottom: 4px;
+}
+
+/* Sheets */
+.sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 4px;
+}
+.big-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin: 2px 0 6px;
+}
+.big-num {
+  min-width: 120px;
+  text-align: center;
+  font-size: 44px;
+  font-weight: 500;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.round-btn {
+  width: var(--icon-btn);
+  height: var(--icon-btn);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-touch-callout: none;
+}
+.scroll-list {
+  max-height: 52dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.text-input {
+  width: 100%;
+  min-height: var(--hit);
+  padding: 0 16px;
+  border-radius: 22px;
+  border: 0.5px solid rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.12);
+  font-size: var(--fs-body);
+  outline: none;
+}
+.text-input::placeholder {
+  color: var(--text-3);
+}
+.text-input:focus {
+  border-color: var(--amber);
+}
+
+/* Edit a session: grip, swipe actions, reorder */
+.swipe {
+  position: relative;
+  overflow: hidden;
+}
+.swipe-main {
+  position: relative;
+  gap: 4px;
+  padding-left: 4px;
+  touch-action: pan-y;
+}
+.swipe-actions {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 156px;
+  display: flex;
+  opacity: 0;
+  transition: opacity var(--t-fast);
+}
+.swipe.revealed .swipe-actions {
+  opacity: 1;
+}
+.swipe-act {
+  flex: 1;
+  font-size: var(--fs-secondary);
+  background: rgba(255, 255, 255, 0.16);
+}
+.swipe-act + .swipe-act {
+  border-left: 0.5px solid var(--sep);
+}
+.grip {
+  width: var(--hit);
+  height: var(--hit);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  cursor: grab;
+}
+.row-name {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--hit);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-right: 4px;
+  text-align: left;
+}
+.swipe.lifted {
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }

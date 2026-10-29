@@ -193,6 +193,10 @@
   font-size: var(--fs-secondary);
 }
 
+.stepper.inline {
+  width: 150px;
+  flex: none;
+}
 .stub {
   padding-top: 8px;
   color: var(--text-2);

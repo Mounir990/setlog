@@ -28,16 +28,43 @@ export function checkCircle() {
   return h('span', { class: 'check' }, icon('check'));
 }
 
+// ---- Tap, long-press repeat ----
+
+// Calls fire(n) on press (n = 0) and then repeatedly while held. Keyboard activation fires once.
+export function bindHold(btn, fire) {
+  let delay = 0;
+  let repeat = 0;
+  const stop = () => {
+    clearTimeout(delay);
+    clearInterval(repeat);
+  };
+  btn.addEventListener('pointerdown', (e) => {
+    if (e.button) return;
+    fire(0);
+    let n = 0;
+    delay = setTimeout(() => {
+      repeat = setInterval(() => fire(++n), 90);
+    }, 420);
+  });
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) btn.addEventListener(ev, stop);
+  // Pointer clicks have detail >= 1 and are handled above.
+  btn.addEventListener('click', (e) => {
+    if (e.detail === 0) fire(0);
+  });
+  btn.addEventListener('contextmenu', (e) => e.preventDefault());
+}
+
 // ---- Stepper with tap, long-press repeat and typed entry ----
 
 const fmt = (n) => String(Math.round(n * 100) / 100);
 
-export function stepper({ label, value, step = 1, min = 0, max = 999, decimal = false, onChange }) {
+export function stepper({ label, value, step = 1, min = 0, max = 999, decimal = false, format, inline = false, onChange }) {
   let v = value;
-  const numBtn = h('button', { class: 'sp-num', type: 'button' }, fmt(v));
+  const show = (n) => (format ? format(n) : fmt(n));
+  const numBtn = h('button', { class: 'sp-num', type: 'button' });
   const sync = () => {
-    numBtn.textContent = fmt(v);
-    numBtn.setAttribute('aria-label', `${label}: ${fmt(v)}. Tap to type a value`);
+    numBtn.textContent = show(v);
+    numBtn.setAttribute('aria-label', `${label}: ${show(v)}. Tap to type a value`);
   };
   sync();
 
@@ -51,29 +78,7 @@ export function stepper({ label, value, step = 1, min = 0, max = 999, decimal = 
 
   const holdButton = (dir, name, aria) => {
     const b = h('button', { class: 'sp-btn', type: 'button', 'aria-label': `${aria} ${label}` }, icon(name));
-    let delay = 0;
-    let repeat = 0;
-    const stop = () => {
-      clearTimeout(delay);
-      clearInterval(repeat);
-    };
-    b.addEventListener('pointerdown', (e) => {
-      if (e.button) return;
-      set(v + dir * step);
-      let n = 0;
-      delay = setTimeout(() => {
-        repeat = setInterval(() => {
-          n += 1;
-          set(v + dir * step * (n > 20 && step === 1 ? 5 : 1));
-        }, 90);
-      }, 420);
-    });
-    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) b.addEventListener(ev, stop);
-    // Keyboard activation only; pointer clicks are handled above.
-    b.addEventListener('click', (e) => {
-      if (e.detail === 0) set(v + dir * step);
-    });
-    b.addEventListener('contextmenu', (e) => e.preventDefault());
+    bindHold(b, (n) => set(v + dir * step * (n > 20 && step === 1 ? 5 : 1)));
     return b;
   };
 
@@ -103,8 +108,55 @@ export function stepper({ label, value, step = 1, min = 0, max = 999, decimal = 
     input.select();
   });
 
-  const box = h('div', { class: 'stepper' }, holdButton(-1, 'minus', 'Decrease'), numBtn, holdButton(1, 'plus', 'Increase'));
+  const box = h('div', { class: 'stepper' + (inline ? ' inline' : '') }, holdButton(-1, 'minus', 'Decrease'), numBtn, holdButton(1, 'plus', 'Increase'));
+  if (inline) return box;
   return h('div', { class: 'field' }, h('span', { class: 'label' }, label), box);
+}
+
+// Large number with round glass minus and plus buttons (bodyweight, rest timer sheets).
+export function bigStepper({ label, value, step, min, max, format, onChange }) {
+  let v = value;
+  const out = h('div', { class: 'big-num', role: 'status', 'aria-label': label }, format(v));
+  const set = (n) => {
+    n = Math.min(max, Math.max(min, Math.round(n * 100) / 100));
+    if (n === v) return;
+    v = n;
+    out.textContent = format(v);
+    onChange(v);
+  };
+  const btn = (dir, name, aria) => {
+    const b = h('button', { class: 'round-btn glass', type: 'button', 'aria-label': `${aria} ${label}` }, icon(name));
+    bindHold(b, (n) => set(v + dir * step * (n > 25 ? 5 : 1)));
+    return b;
+  };
+  return h('div', { class: 'big-stepper' }, btn(-1, 'minus', 'Decrease'), out, btn(1, 'plus', 'Increase'));
+}
+
+// Segmented control. options: [{ value, label }].
+export function segmented({ options, value, onChange, label }) {
+  const el = h('div', { class: 'seg glass', role: 'group', 'aria-label': label || null });
+  const draw = (cur) => {
+    el.replaceChildren(
+      ...options.map((o) =>
+        h(
+          'button',
+          {
+            class: o.value === cur ? 'on' : '',
+            type: 'button',
+            'aria-pressed': String(o.value === cur),
+            onclick: () => {
+              if (o.value === cur) return;
+              draw(o.value);
+              onChange(o.value);
+            },
+          },
+          o.label,
+        ),
+      ),
+    );
+  };
+  draw(value);
+  return el;
 }
 
 // ---- Bottom sheet over a dimmed screen ----

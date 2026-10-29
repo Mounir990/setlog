@@ -2,7 +2,7 @@
 // Strategy: network first (short timeout) so a new deploy shows up on the next open,
 // falling back to the cache when offline or slow. Bump CACHE when the file list changes.
 
-const CACHE = 'setlog-v2';
+const CACHE = 'setlog-v3';
 
 const ASSETS = [
   './',
@@ -23,12 +23,14 @@ const ASSETS = [
   'js/actions.js',
   'js/ui.js',
   'js/media.js',
+  'js/chart.js',
   'js/stickfigures.js',
   'js/screens/today.js',
   'js/screens/overview.js',
   'js/screens/exercise.js',
   'js/screens/done.js',
-  'js/screens/stubs.js',
+  'js/screens/progress.js',
+  'js/screens/plan.js',
   'fonts/bricolage-grotesque-latin-400.woff2',
   'fonts/bricolage-grotesque-latin-500.woff2',
   'icons/icon.svg',

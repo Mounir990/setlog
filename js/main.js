@@ -9,7 +9,8 @@ import { today, todayWithChoose } from './screens/today.js';
 import { overview } from './screens/overview.js';
 import { exercise } from './screens/exercise.js';
 import { done } from './screens/done.js';
-import { progress, plan } from './screens/stubs.js';
+import { progress, bodyweightSheet, exerciseProgress } from './screens/progress.js';
+import { plan, restSheet, backupSheet, editSession, addSheet, swapSheet, editExercise } from './screens/plan.js';
 
 // key: screens with the same key do not replay the enter animation (Today and its sheet).
 // tab: which tab is highlighted; screens without one hide the tab bar.
@@ -17,7 +18,15 @@ const ROUTES = [
   { pattern: '/', key: 'today', tab: '/', build: today },
   { pattern: '/choose', key: 'today', build: todayWithChoose },
   { pattern: '/progress', key: 'progress', tab: '/progress', build: progress },
+  { pattern: '/progress/bodyweight', key: 'progress', build: bodyweightSheet },
+  { pattern: '/progress/ex/:key', key: (p) => `px:${p.key}`, build: exerciseProgress },
   { pattern: '/plan', key: 'plan', tab: '/plan', build: plan },
+  { pattern: '/plan/rest', key: 'plan', build: restSheet },
+  { pattern: '/plan/backup', key: 'plan', build: backupSheet },
+  { pattern: '/plan/:sid', key: (p) => `ps:${p.sid}`, build: editSession },
+  { pattern: '/plan/:sid/add', key: (p) => `ps:${p.sid}`, build: addSheet },
+  { pattern: '/plan/:sid/swap/:exId', key: (p) => `ps:${p.sid}`, build: swapSheet },
+  { pattern: '/plan/:sid/:exId', key: (p) => `pe:${p.sid}:${p.exId}`, build: editExercise },
   { pattern: '/session/:sid', key: (p) => `s:${p.sid}`, build: overview },
   { pattern: '/session/:sid/:exId', key: (p) => `e:${p.sid}:${p.exId}`, build: exercise },
   { pattern: '/done/:sid', key: (p) => `d:${p.sid}`, build: done },

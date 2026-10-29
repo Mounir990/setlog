@@ -96,6 +96,11 @@ export function mutate(fn) {
   notify();
 }
 
+// Save without re-rendering. Used by editors that update their own controls while the user is mid-gesture.
+export function persist() {
+  save();
+}
+
 export function replaceAll(next) {
   state = migrate(next);
   save();

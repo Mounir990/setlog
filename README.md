@@ -2,7 +2,7 @@
 
 A personal workout tracker for one user. It guides each training session, logs every set and shows progress per exercise. Vanilla HTML, CSS and JavaScript (ES modules), no framework, no build step, no backend, no accounts. Installable as a PWA and fully offline.
 
-Status: phase 1 (core training loop). Progress, Plan, Back up data and the exercise animations come in phases 2 and 3.
+Status: phases 1 and 2 (training loop, progress charts, plan editing, backup) plus exercise animations. Phase 3 polish is still to come.
 
 ## Run locally
 
@@ -45,7 +45,8 @@ js/progression.js     prefill, hints, bests, rotation, weekly count (all derived
 js/rest.js            rest timer based on an end timestamp
 js/router.js          hash routes on the History API
 js/media.js, js/stickfigures.js   exercise animation box and built-in fallbacks
-js/screens/           one file per screen
+js/chart.js           line chart and sparkline
+js/screens/           one file per screen (today, overview, exercise, done, progress, plan)
 sw.js, manifest.webmanifest, icons/
 scripts/make-icons.mjs  regenerates the app icons (not part of the app)
 scripts/build-gifs.mjs  rebuilds the exercise GIFs from public-domain photos (not part of the app)
@@ -53,7 +54,7 @@ scripts/build-gifs.mjs  rebuilds the exercise GIFs from public-domain photos (no
 
 ## Data
 
-Everything is stored on the device in `localStorage` under `setlog.data` (schema version 1). Clearing browser data erases history, so use Back up data once it ships in phase 2.
+Everything is stored on the device in `localStorage` under `setlog.data` (schema version 1). Clearing browser data erases history, so use Plan, then Back up data, to export a JSON file now and then. Import restores it.
 
 ## Credits
 
