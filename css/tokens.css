@@ -1,0 +1,80 @@
+/* Design tokens. Every size lives here so it can be adjusted after testing on a phone.
+   Values follow the real-size table in BRAND.md section 4 (390px wide phone). */
+
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/bricolage-grotesque-latin-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../fonts/bricolage-grotesque-latin-500.woff2') format('woff2');
+}
+
+:root {
+  /* Colors */
+  --night: #0b1633;
+  --night-2: #0c2a4a;
+  --petrol-1: #0a4150;
+  --petrol: #0b4f4e;
+  --amber: #ffb020;
+  --amber-light: #ffd66e;
+  --amber-dark: #ee980c;
+  --white: #ffffff;
+  --text-2: rgba(255, 255, 255, 0.7);
+  --text-3: rgba(255, 255, 255, 0.45);
+  --sep: rgba(255, 255, 255, 0.16);
+  --solid-glass: rgba(20, 42, 72, 0.92);
+
+  /* Type */
+  --font: 'Bricolage Grotesque', system-ui, -apple-system, sans-serif;
+  --fs-title: 30px;
+  --fs-body: 17px;
+  --fs-secondary: 14px;
+  --fs-caption: 13px;
+  --fs-big: 26px;
+  --fs-sheet-title: 20px;
+
+  /* Layout */
+  --pad-x: 20px;
+  --pad-top: 18px;
+  --gap: 12px;
+  --bottom-gap: 24px;
+
+  /* Buttons and controls */
+  --btn-h: 50px;
+  --btn-r: 25px;
+  --btn-fs: 16px;
+  --icon-btn: 44px;
+  --icon: 22px;
+  --check: 24px;
+  --stepper-h: 36px;
+  --hit: 44px;
+  --seg-w: 30px;
+  --seg-h: 8px;
+
+  /* Lists and cards */
+  --row-py: 13px;
+  --row-px: 16px;
+  --card-r: 26px;
+  --list-r: 24px;
+  --sheet-r: 32px;
+  --tab-r: 32px;
+  --tile-r: 20px;
+  --pill-r: 14px;
+
+  /* Tab bar */
+  --tab-side: 16px;
+  --tab-bottom: 10px;
+  --tab-h: 64px;
+
+  /* Motion */
+  --t-fast: 150ms;
+  --t-base: 220ms;
+  --t-sheet: 280ms;
+}

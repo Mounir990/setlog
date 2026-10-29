@@ -1,0 +1,583 @@
+/* Base, glass, buttons and shared components. */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  background: var(--night);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  font-weight: 400;
+  line-height: 1.3;
+  color: var(--white);
+  background: transparent;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overflow-x: hidden;
+}
+
+/* Fixed gradient behind every screen. It never scrolls. */
+#bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(165deg, #0b1633 0%, #0c2a4a 35%, #0a4150 70%, #0b4f4e 100%);
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+strong,
+b {
+  font-weight: 500;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.icon {
+  display: inline-flex;
+  width: var(--icon);
+  height: var(--icon);
+  flex: none;
+}
+.icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.muted {
+  color: var(--text-2);
+}
+.dim {
+  color: var(--text-3);
+}
+.sec {
+  font-size: var(--fs-secondary);
+}
+.cap {
+  font-size: var(--fs-caption);
+}
+.amber {
+  color: var(--amber);
+}
+.medium {
+  font-weight: 500;
+}
+
+/* ---- Glass ---- */
+
+.glass {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 0.5px solid rgba(255, 255, 255, 0.26);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.05),
+    0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass {
+    background: var(--solid-glass);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    background: var(--solid-glass);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+.card {
+  border-radius: var(--card-r);
+  padding: 18px;
+}
+
+/* Grouped list: rows separated by a 0.5px line, none after the last. */
+.list {
+  border-radius: var(--list-r);
+  overflow: hidden;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--hit);
+  padding: var(--row-py) var(--row-px);
+  text-align: left;
+}
+.list > .row + .row,
+.list > * + * {
+  border-top: 0.5px solid var(--sep);
+}
+.row.active {
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: inset 3px 0 0 var(--amber);
+}
+.row .name {
+  flex: 1;
+  min-width: 0;
+}
+.row .end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+button.row:active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.label {
+  font-size: var(--fs-secondary);
+  color: var(--text-2);
+}
+
+/* ---- Check marks ---- */
+
+.check {
+  width: var(--check);
+  height: var(--check);
+  border-radius: 50%;
+  background: var(--white);
+  color: #000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.check .icon {
+  width: 15px;
+  height: 15px;
+}
+.ring {
+  width: var(--check);
+  height: var(--check);
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  flex: none;
+}
+
+/* ---- Buttons ---- */
+
+.btn-primary,
+.btn-rest {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: var(--btn-h);
+  border-radius: var(--btn-r);
+  font-size: var(--btn-fs);
+  font-weight: 500;
+}
+
+.btn-primary {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 214, 110, 0.98) 0%,
+    rgba(255, 176, 32, 0.94) 55%,
+    rgba(238, 152, 12, 0.92) 100%
+  );
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 6px 14px rgba(0, 0, 0, 0.3);
+  color: var(--night);
+  transition: transform var(--t-fast);
+}
+.btn-primary:active {
+  transform: scale(0.985);
+}
+.btn-primary .icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Rest button: night glass, amber outline, elapsed time fills from the left. */
+.btn-rest {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.04) 55%, rgba(255, 255, 255, 0)),
+    rgba(11, 22, 51, 0.82);
+  border: 1px solid var(--amber);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 6px 14px rgba(0, 0, 0, 0.35);
+  color: var(--white);
+}
+.btn-rest .fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 214, 110, 0.98) 0%,
+    rgba(255, 176, 32, 0.94) 55%,
+    rgba(238, 152, 12, 0.92) 100%
+  );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.btn-rest .lbl {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  white-space: nowrap;
+}
+.btn-rest .fill .lbl {
+  color: var(--night);
+}
+.btn-rest .icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* Round glass icon button (back, close). Hit area is the full 44px. */
+.icon-btn {
+  width: var(--icon-btn);
+  height: var(--icon-btn);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--white);
+}
+
+/* Bottom-anchored primary button: sits directly on the background, nothing behind it. */
+.bottom {
+  position: fixed;
+  left: var(--pad-x);
+  right: var(--pad-x);
+  bottom: calc(var(--bottom-gap) + env(safe-area-inset-bottom));
+  z-index: 5;
+}
+
+/* Text link */
+.link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: var(--hit);
+  font-size: var(--fs-secondary);
+  color: var(--text-2);
+}
+.link .icon {
+  width: 16px;
+  height: 16px;
+  color: var(--white);
+}
+
+/* ---- Pills ---- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--amber);
+  color: var(--night);
+  border-radius: var(--pill-r);
+  padding: 4px 12px;
+  font-size: var(--fs-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+}
+.hint {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 2px 11px;
+  font-size: var(--fs-caption);
+  color: var(--amber);
+  border: 0.5px solid rgba(255, 176, 32, 0.75);
+  border-radius: var(--pill-r);
+  position: relative;
+}
+/* Keep the hit area at 44px without growing the pill. */
+.hint::after {
+  content: '';
+  position: absolute;
+  inset: -8px -6px;
+}
+
+/* ---- Steppers ---- */
+
+.fields {
+  display: flex;
+  gap: 12px;
+}
+.field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field .label {
+  font-size: var(--fs-caption);
+}
+.stepper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--stepper-h);
+  border-radius: calc(var(--stepper-h) / 2);
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  font-weight: 500;
+}
+.stepper .sp-btn {
+  width: var(--hit);
+  height: var(--hit);
+  margin: calc((var(--stepper-h) - var(--hit)) / 2) 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-touch-callout: none;
+}
+.stepper .sp-btn .icon {
+  width: 18px;
+  height: 18px;
+}
+.stepper .sp-num,
+.stepper .sp-input {
+  flex: 1;
+  min-width: 0;
+  height: var(--stepper-h);
+  text-align: center;
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+.stepper .sp-input {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Sheets ---- */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: rgba(4, 10, 28, 0.55);
+  animation: fade var(--t-base) ease-out both;
+}
+.sheet {
+  position: fixed;
+  left: 8px;
+  right: 8px;
+  bottom: calc(8px + env(safe-area-inset-bottom));
+  z-index: 21;
+  border-radius: var(--sheet-r);
+  padding: 10px 20px 14px;
+  animation: sheet-up var(--t-sheet) cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.sheet.closing {
+  animation: sheet-down var(--t-base) ease-in both;
+}
+.scrim.closing {
+  animation: fade-out var(--t-base) ease-in both;
+}
+.sheet .grab {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.4);
+  margin: 0 auto 12px;
+}
+.sheet .row {
+  padding-left: 0;
+  padding-right: 0;
+}
+.sheet h2 {
+  font-size: var(--fs-sheet-title);
+  margin-bottom: 4px;
+}
+
+.static,
+.static.scrim,
+.static.sheet {
+  animation: none;
+}
+
+/* ---- Session name underline ---- */
+
+.underlined {
+  position: relative;
+  display: inline-block;
+}
+.underlined svg {
+  position: absolute;
+  left: -3px;
+  bottom: -10px;
+  width: calc(100% + 8px);
+  height: 14px;
+  overflow: visible;
+}
+.underlined path {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.underlined.draw svg {
+  clip-path: inset(0 100% 0 0);
+  animation: draw 600ms ease-out 80ms forwards;
+}
+
+/* ---- Tab bar ---- */
+
+#tabbar {
+  position: fixed;
+  left: var(--tab-side);
+  right: var(--tab-side);
+  bottom: calc(var(--tab-bottom) + env(safe-area-inset-bottom));
+  z-index: 10;
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--tab-r);
+}
+#tabbar[hidden] {
+  display: none;
+}
+#tabbar a {
+  flex: 1;
+  min-width: 0;
+  min-height: calc(var(--tab-h) - 8px);
+  border-radius: calc(var(--tab-r) - 4px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: var(--fs-caption);
+  line-height: 1.2;
+  color: var(--white);
+  transition: background var(--t-fast);
+}
+#tabbar a.on {
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  color: var(--amber);
+}
+
+/* ---- Motion ---- */
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(110%);
+  }
+}
+@keyframes sheet-down {
+  to {
+    transform: translateY(110%);
+  }
+}
+@keyframes draw {
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+/* Opacity only: a transform here would trap the fixed bottom button inside the screen. */
+@keyframes enter {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+  .underlined.draw svg {
+    clip-path: none;
+    animation: none;
+  }
+}
