@@ -40,13 +40,20 @@ export function mediaBox(ex) {
   };
 
   const showFallback = () => {
-    const svg = ex.slug && FIGURES[ex.slug];
-    if (svg) {
-      const holder = h('div', { class: 'media-fill', html: svg });
+    const figure = ex.slug && FIGURES[ex.slug];
+    if (figure) {
+      const holder = h('div', { class: 'media-fill', html: figure() });
       const root = holder.firstElementChild;
       mount(holder, {
-        pause: () => root.classList.add('paused'),
-        resume: () => root.classList.remove('paused'),
+        // Rig figures use SMIL, the dead hang figure uses CSS animation.
+        pause: () => {
+          root.classList.add('paused');
+          if (root.pauseAnimations) root.pauseAnimations();
+        },
+        resume: () => {
+          root.classList.remove('paused');
+          if (root.unpauseAnimations) root.unpauseAnimations();
+        },
       });
     } else {
       box.prepend(h('span', { class: 'media-empty' }, icon('player-play'), 'No animation'));
