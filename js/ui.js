@@ -169,9 +169,3 @@ export function restButton(rest, onSkip) {
   update();
   return { el: btn, stop: () => cancelAnimationFrame(raf) };
 }
-
-// ---- Exercise animation box (placeholder until animations are added) ----
-
-export function mediaBox() {
-  return h('div', { class: 'media glass', role: 'img', 'aria-label': 'Exercise animation' }, icon('player-play'), 'Animation');
-}

@@ -14,7 +14,8 @@ import {
 } from '../progression.js';
 import { logSet, updateSet, deleteSet } from '../actions.js';
 import * as rest from '../rest.js';
-import { iconButton, stepper, checkCircle, restButton, mediaBox } from '../ui.js';
+import { iconButton, stepper, checkCircle, restButton } from '../ui.js';
+import { mediaBox } from '../media.js';
 
 // Unsaved stepper values, kept across re-renders: "sessionId:exerciseId:setIndex" -> values.
 const drafts = new Map();
@@ -264,15 +265,9 @@ export function exercise({ sid, exId }) {
       best > 0 ? h('span', { class: 'pill' }, `Best ${bestShort(ex, best)}`) : null,
     ),
     ex.note ? h('p', { class: 'note' }, ex.note) : null,
-    mediaBox(),
+    mediaBox(ex),
     h('section', { class: 'glass list' }, rows),
     h('div', { class: 'bottom' }, bottom),
   );
   return { el, cleanup };
-}
-
-// Called when leaving a session so stale drafts do not leak into the next one.
-export function resetExerciseState() {
-  drafts.clear();
-  editing = null;
 }

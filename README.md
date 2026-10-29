@@ -27,7 +27,11 @@ Updates: the service worker fetches new files first and falls back to the cache 
 
 ## Exercise animations
 
-Not wired up yet (phase 3). Put your own files in `media/exercises/<slug>.gif` (`.webp` and `.mp4` also work). Slugs: `pull-ups`, `slow-negatives`, `barbell-row`, `lat-pulldown`, `face-pulls`, `biceps-curls`, `dead-hang`, `push-ups`, `bench-press`, `overhead-press`, `incline-dumbbell-press`, `lateral-raises`, `triceps-pushdown`, `easy-pull-ups`, `squat`, `romanian-deadlift`, `leg-press`, `leg-curl`, `calf-raises`, `ab-wheel`.
+Every exercise screen shows a looping animation; tapping it pauses it. The app looks for `media/exercises/<slug>.gif`, then `.webp`, then `.mp4`. If none exists it draws a built-in stick figure (currently only `dead-hang`, see `js/stickfigures.js`), and custom exercises show a plain placeholder.
+
+The bundled GIFs come from the public-domain Free Exercise DB photos, recoloured to the app's duotone (see `media/exercises/CREDITS.md`). To use your own, drop a file with the same slug into `media/exercises/`. For offline use, add its name to `ASSETS` in `sw.js` and bump `CACHE`.
+
+Slugs: `pull-ups`, `slow-negatives`, `barbell-row`, `lat-pulldown`, `face-pulls`, `biceps-curls`, `dead-hang`, `push-ups`, `bench-press`, `overhead-press`, `incline-dumbbell-press`, `lateral-raises`, `triceps-pushdown`, `easy-pull-ups`, `squat`, `romanian-deadlift`, `leg-press`, `leg-curl`, `calf-raises`, `ab-wheel`.
 
 ## Structure
 
@@ -40,9 +44,11 @@ js/plan.js            default plan (editable data)
 js/progression.js     prefill, hints, bests, rotation, weekly count (all derived from logged sets)
 js/rest.js            rest timer based on an end timestamp
 js/router.js          hash routes on the History API
+js/media.js, js/stickfigures.js   exercise animation box and built-in fallbacks
 js/screens/           one file per screen
 sw.js, manifest.webmanifest, icons/
 scripts/make-icons.mjs  regenerates the app icons (not part of the app)
+scripts/build-gifs.mjs  rebuilds the exercise GIFs from public-domain photos (not part of the app)
 ```
 
 ## Data
