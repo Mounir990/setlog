@@ -27,7 +27,7 @@ Updates: the service worker fetches new files first and falls back to the cache 
 
 ## Offline
 
-All app files, the font, icons and the exercise GIFs are cached on first load, so the app works with no connection, including after the phone restarts. Data never leaves the device.
+All app files, the font and the icons are cached on first load, so the app works with no connection, including after the phone restarts. Data never leaves the device.
 
 ## Accessibility and comfort
 
@@ -38,9 +38,9 @@ All app files, the font, icons and the exercise GIFs are cached on first load, s
 
 ## Exercise animations
 
-Every exercise screen shows a looping animation; tapping it pauses it. The app looks for `media/exercises/<slug>.gif`, then `.webp`, then `.mp4`. If none exists it draws a built-in looping stick figure for that exercise (all 20 have one, see `js/stickfigures.js`), and custom exercises show a plain placeholder.
+Every exercise screen shows a looping stick-figure animation (white lines on glass); tapping it pauses it. The figures are drawn in code from two poses per exercise (`js/stickfigures.js`), so there is nothing to download and they work offline.
 
-The bundled GIFs come from the public-domain Free Exercise DB photos, recoloured to the app's duotone (see `media/exercises/CREDITS.md`). To use your own, drop a file with the same slug into `media/exercises/`. For offline use, add its name to `ASSETS` in `sw.js` and bump `CACHE`.
+To use your own animation for an exercise, drop `media/exercises/<slug>.gif` (or `.webp`, `.mp4`) into the repo. A file with the right slug takes priority over the built-in figure. For offline use, add its path to `ASSETS` in `sw.js` and bump `CACHE`. Custom exercises you add in the app show a plain placeholder.
 
 Slugs: `pull-ups`, `slow-negatives`, `barbell-row`, `lat-pulldown`, `face-pulls`, `biceps-curls`, `dead-hang`, `push-ups`, `bench-press`, `overhead-press`, `incline-dumbbell-press`, `lateral-raises`, `triceps-pushdown`, `easy-pull-ups`, `squat`, `romanian-deadlift`, `leg-press`, `leg-curl`, `calf-raises`, `ab-wheel`.
 
@@ -60,7 +60,6 @@ js/chart.js           line chart and sparkline
 js/screens/           one file per screen (today, overview, exercise, done, progress, plan)
 sw.js, manifest.webmanifest, icons/
 scripts/make-icons.mjs  regenerates the app icons (not part of the app)
-scripts/build-gifs.mjs  rebuilds the exercise GIFs from public-domain photos (not part of the app)
 ```
 
 ## Data

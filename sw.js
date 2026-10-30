@@ -2,7 +2,7 @@
 // Strategy: network first (short timeout) so a new deploy shows up on the next open,
 // falling back to the cache when offline or slow. Bump CACHE when the file list changes.
 
-const CACHE = 'setlog-v3';
+const CACHE = 'setlog-v4';
 
 const ASSETS = [
   './',
@@ -37,25 +37,6 @@ const ASSETS = [
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/apple-touch-icon.png',
-  'media/exercises/pull-ups.gif',
-  'media/exercises/easy-pull-ups.gif',
-  'media/exercises/slow-negatives.gif',
-  'media/exercises/barbell-row.gif',
-  'media/exercises/lat-pulldown.gif',
-  'media/exercises/face-pulls.gif',
-  'media/exercises/biceps-curls.gif',
-  'media/exercises/push-ups.gif',
-  'media/exercises/bench-press.gif',
-  'media/exercises/overhead-press.gif',
-  'media/exercises/incline-dumbbell-press.gif',
-  'media/exercises/lateral-raises.gif',
-  'media/exercises/triceps-pushdown.gif',
-  'media/exercises/squat.gif',
-  'media/exercises/romanian-deadlift.gif',
-  'media/exercises/leg-press.gif',
-  'media/exercises/leg-curl.gif',
-  'media/exercises/calf-raises.gif',
-  'media/exercises/ab-wheel.gif',
 ];
 
 self.addEventListener('install', (event) => {
