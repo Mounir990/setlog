@@ -259,6 +259,107 @@ SPECS['slow-negatives'] = {
   times: [0, 0.08, 0.84, 0.9, 1],
 };
 
+// ---- Push / Pull / Leg program ----
+// Many variants share a base pose and only change the props around it.
+
+const seat = (x = 150, y = 186) => `<path class="s" d="M${x - 24} ${y + 8} H${x + 42}"/><path class="s" d="M${x} ${y + 8} V224"/>` + floor(60, 300, 226);
+
+Object.assign(SPECS, {
+  'incline-machine-press': {
+    ...SPECS['incline-dumbbell-press'],
+    static: `<path class="s" d="M70 196 L126 150 M126 150 L148 196 H210"/><path class="s" d="M196 60 V160"/>` + floor(60, 270, 226),
+  },
+  'cable-lateral-raise': {
+    ...SPECS['lateral-raises'],
+    static: floor(70, 290, 226) + `<circle class="s" cx="256" cy="214" r="7"/>`,
+    extras: (j) => [line([256, 214], j.ha), dot(j.ha, 5)],
+  },
+  'bench-press-free': SPECS['bench-press'],
+  'bench-press-guided': { ...SPECS['bench-press'], static: SPECS['bench-press'].static + `<path class="s" d="M168 80 V190 M232 80 V190"/>` },
+  'shoulder-press-machine': {
+    static: seat(150, 186) + `<path class="s" d="M126 120 V186"/>`,
+    A: { hip: [150, 186], thigh: 82, shin: 4, torso: 178, uarm: 30, farm: 192 },
+    B: { hip: [150, 186], thigh: 82, shin: 4, torso: 178, uarm: 180, farm: 180 },
+    extras: (j) => [dot(j.ha, 6)],
+  },
+  dips: {
+    static: `<path class="s" d="M170 122 H240"/><path class="s" d="M240 122 V226"/>` + floor(60, 300, 226),
+    A: { hand: [204, 122], farm: 0, uarm: 0, torso: 180, thigh: 0, shin: -105, toe: [-8, 6] },
+    B: { hand: [204, 122], farm: 10, uarm: -80, torso: 168, thigh: 0, shin: -105, toe: [-8, 6] },
+  },
+  'skullcrusher-free': {
+    static: SPECS['bench-press'].static,
+    A: { hip: [150, 180], thigh: -125, shin: -30, torso: 90, uarm: 180, farm: 180 },
+    B: { hip: [150, 180], thigh: -125, shin: -30, torso: 90, uarm: 180, farm: 108 },
+    extras: (j) => [dot(j.ha, 6)],
+  },
+  'skullcrusher-cable': {
+    static: SPECS['bench-press'].static + `<circle class="s" cx="292" cy="214" r="7"/>`,
+    A: { hip: [150, 180], thigh: -125, shin: -30, torso: 90, uarm: 180, farm: 180 },
+    B: { hip: [150, 180], thigh: -125, shin: -30, torso: 90, uarm: 180, farm: 108 },
+    extras: (j) => [line([292, 214], j.ha), dot(j.ha, 5)],
+  },
+  'triceps-pushdown-one-hand': SPECS['triceps-pushdown'],
+  'lat-pulldown-wide': { ...SPECS['lat-pulldown'], static: SPECS['lat-pulldown'].static + `<path class="s" d="M150 4 H226"/>` },
+  'lat-pulldown-narrow': SPECS['lat-pulldown'],
+  'pull-ups-wide': { ...SPECS['pull-ups'], static: `<path class="s" d="M90 34 H210"/>` },
+  'pull-ups-narrow': { ...SPECS['pull-ups'], static: `<path class="s" d="M134 34 H166"/>` },
+  'cable-rear-delt-fly': {
+    static: floor(70, 290, 226) + `<circle class="s" cx="286" cy="96" r="7"/>`,
+    A: { ...stand, torso: 160, uarm: 88, farm: 88 },
+    B: { ...stand, torso: 160, uarm: 255, farm: 262 },
+    extras: (j) => [line([286, 96], j.ha), dot(j.ha, 5)],
+  },
+  't-bar-row': {
+    ...SPECS['barbell-row'],
+    static: floor(70, 290, 226) + `<circle class="s" cx="262" cy="222" r="5"/>`,
+    extras: (j) => [line([262, 222], j.ha), ring(j.ha, 10)],
+  },
+  'rowing-machine-wide': {
+    static: seat(130, 186) + `<path class="s" d="M232 150 V226"/>`,
+    A: { hip: [130, 186], thigh: 82, shin: 4, torso: 174, uarm: 84, farm: 88 },
+    B: { hip: [130, 186], thigh: 82, shin: 4, torso: 180, uarm: 258, farm: 100 },
+    extras: (j) => [line([300, 130], j.ha), dot(j.ha, 5)],
+  },
+  'back-extension-free': {
+    static: `<path class="s" d="M160 156 L240 226"/><path class="s" d="M196 152 L214 190"/>`,
+    A: { hip: [196, 150], thigh: -52, shin: -52, torso: 32, uarm: 10, farm: 10, toe: [-6, 6] },
+    B: { hip: [196, 150], thigh: -52, shin: -52, torso: 128, uarm: 60, farm: 172, toe: [-6, 6] },
+  },
+  'back-extension-machine': {
+    static: seat(150, 186) + `<path class="s" d="M122 150 V196"/>`,
+    A: { hip: [150, 186], thigh: 82, shin: 4, torso: 128, uarm: 60, farm: 172 },
+    B: { hip: [150, 186], thigh: 82, shin: 4, torso: 186, uarm: 60, farm: 172 },
+  },
+  'incline-biceps-curl': {
+    static: `<path class="s" d="M70 196 L126 150 M126 150 L148 196 H210"/>` + floor(60, 270, 226),
+    A: { hip: [150, 186], thigh: 82, shin: 8, torso: 222, uarm: 4, farm: 4 },
+    B: { hip: [150, 186], thigh: 82, shin: 8, torso: 222, uarm: 8, farm: 172 },
+    extras: (j) => [dot(j.ha, 7)],
+  },
+  'hammer-curl': SPECS['biceps-curls'],
+  'standing-calf-raise': SPECS['calf-raises'],
+  'seated-calf-raise': {
+    static: seat(130, 168) + floor(60, 300, 226),
+    A: { hip: [130, 168], thigh: 90, shin: 2, torso: 176, uarm: 20, farm: 78, toe: [12, 0] },
+    B: { hip: [130, 168], thigh: 86, shin: 2, torso: 176, uarm: 20, farm: 78, toe: [8, 13] },
+    extras: (j) => [ring(add(j.kn, [0, -10]), 9)],
+  },
+  'hex-squat': {
+    static: floor(70, 270, 226),
+    A: { ...stand, uarm: 6, farm: 6 },
+    B: { foot: [160, 224], thigh: 80, shin: -32, torso: 158, uarm: 6, farm: 6 },
+    extras: (j) => [ring(j.ha, 11)],
+  },
+  'lying-leg-curl': SPECS['leg-curl'],
+  'leg-extension': {
+    static: seat(140, 176) + `<path class="s" d="M104 140 V184"/>`,
+    A: { hip: [140, 176], thigh: 90, shin: 2, torso: 178, uarm: 20, farm: 50 },
+    B: { hip: [140, 176], thigh: 90, shin: 88, torso: 178, uarm: 20, farm: 50 },
+    extras: (j) => [ring(add(j.ft, [-2, -6]), 6)],
+  },
+});
+
 // Dead hang is a front view: arms straight, then the shoulders pull down a little and relax.
 const deadHang = `
   <svg viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

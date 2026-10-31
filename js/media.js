@@ -1,7 +1,9 @@
 // Exercise animation box at the top of every exercise screen.
 //
-// Looks for media/exercises/<slug>.gif, then .webp, then .mp4 (muted, looping, inline).
-// If none exists, draws the built-in stick figure for that exercise; custom exercises get a plain placeholder.
+// Own animations: put <slug>.gif, <slug>.webp or <slug>.mp4 in media/exercises/ and list the file name in
+// media/exercises/index.json. A listed file replaces the built-in stick figure for that exercise.
+// Without a listed file the built-in stick figure is drawn; custom exercises get a plain placeholder.
+// (The list avoids probing for files that do not exist, which would log errors on every exercise screen.)
 // Tapping the box pauses and resumes. With reduced motion the animation starts paused.
 
 import { h, reducedMotion } from './dom.js';
@@ -9,6 +11,14 @@ import { icon } from './icons.js';
 import { FIGURES } from './stickfigures.js';
 
 const BASE = 'media/exercises/';
+
+// File names listed in media/exercises/index.json. Loaded once; empty if the file is missing.
+let listed = null;
+const listedReady = fetch(`${BASE}index.json`)
+  .then((r) => (r.ok ? r.json() : { files: [] }))
+  .then((j) => (Array.isArray(j.files) ? j.files.filter((f) => typeof f === 'string') : []))
+  .catch(() => [])
+  .then((files) => (listed = files));
 
 // Reuse the element between re-renders so the animation does not restart or flicker.
 let cached = null;
@@ -61,7 +71,7 @@ export function mediaBox(ex) {
     }
   };
 
-  const tryVideo = () => {
+  const tryVideo = (file) => {
     const v = h('video', { class: 'media-fill', loop: true, playsinline: true, preload: 'auto' });
     v.muted = true;
     v.addEventListener('error', showFallback, { once: true });
@@ -73,10 +83,10 @@ export function mediaBox(ex) {
       },
       { once: true },
     );
-    v.src = `${BASE}${ex.slug}.mp4`;
+    v.src = `${BASE}${file}`;
   };
 
-  const tryImage = (ext, next) => {
+  const tryImage = (file, next) => {
     const img = new Image();
     img.className = 'media-fill';
     img.alt = '';
@@ -103,11 +113,17 @@ export function mediaBox(ex) {
         },
       });
     };
-    img.src = `${BASE}${ex.slug}.${ext}`;
+    img.src = `${BASE}${file}`;
   };
 
-  if (ex.slug) tryImage('gif', () => tryImage('webp', tryVideo));
-  else showFallback();
+  const start = (files) => {
+    const file = ex.slug && files.find((f) => f.replace(/\.[^.]+$/, '') === ex.slug);
+    if (!file) showFallback();
+    else if (/\.mp4$/i.test(file)) tryVideo(file);
+    else tryImage(file, showFallback);
+  };
+  if (listed) start(listed);
+  else listedReady.then(start);
 
   cached = { key, el: box };
   return box;

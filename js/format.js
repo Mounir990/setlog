@@ -1,5 +1,7 @@
 // Text formatting helpers shared by the screens.
 
+import { BODYWEIGHT_BASE } from './progression.js';
+
 export const num = (n) => String(Math.round(n * 100) / 100);
 
 export function setSummary(ex, s) {
@@ -9,8 +11,15 @@ export function setSummary(ex, s) {
       return (
         `${s.cleanReps} clean` + (s.partialReps ? `, ${s.partialReps} part.` : '') + (s.weight > 0 ? `, +${num(s.weight)} kg` : '')
       );
-    case 'weighted':
-      return `${num(s.weight)} kg x ${s.reps}`;
+    case 'weighted': {
+      const main = ex.bodyweight
+        ? s.weight > 0
+          ? `+${num(s.weight)} kg x ${s.reps}`
+          : `${s.reps} reps`
+        : `${num(s.weight)} kg x ${s.reps}`;
+      // Drops follow the main entry: "20 kg x 12 > 16 x 10 > 12 x 8".
+      return main + (s.drops || []).map((x) => ` > ${num(x.weight)} x ${x.reps}`).join('');
+    }
     case 'time':
       return `${s.seconds} s`;
     default:
@@ -20,10 +29,12 @@ export function setSummary(ex, s) {
 
 // Value shown in the "Best" pill and PR list.
 export function bestShort(ex, v) {
+  if (ex.bodyweight) return v >= BODYWEIGHT_BASE ? `+${num(v - BODYWEIGHT_BASE)} kg` : `${num(v)} reps`;
   return ex.kind === 'time' ? `${num(v)} s` : num(v);
 }
 
 export function bestLong(ex, v) {
+  if (ex.bodyweight) return bestShort(ex, v);
   switch (ex.kind) {
     case 'pullup':
     case 'easy':
@@ -76,10 +87,14 @@ export function sessionSummary(ex, sets) {
     case 'weighted': {
       const weights = sets.map((s) => s.weight || 0);
       const reps = sets.map((s) => s.reps || 0);
+      const drops = sets.reduce((n, s) => n + (s.drops ? s.drops.length : 0), 0);
+      const tail = drops ? ` (+${drops} ${drops === 1 ? 'drop' : 'drops'})` : '';
       if (same(weights)) {
-        return same(reps) ? `${num(weights[0])} kg, ${reps.length} x ${reps[0]}` : `${num(weights[0])} kg x ${reps.join(', ')}`;
+        if (ex.bodyweight && weights[0] === 0) return (same(reps) ? `${reps.length} x ${reps[0]}` : `${reps.join(', ')} reps`) + tail;
+        const w = ex.bodyweight ? `+${num(weights[0])} kg` : `${num(weights[0])} kg`;
+        return (same(reps) ? `${w}, ${reps.length} x ${reps[0]}` : `${w} x ${reps.join(', ')}`) + tail;
       }
-      return sets.map((s) => `${num(s.weight || 0)} x ${s.reps || 0}`).join(', ') + ' kg';
+      return sets.map((s) => `${num(s.weight || 0)} x ${s.reps || 0}`).join(', ') + ' kg' + tail;
     }
     case 'time':
       return `${sets.map((s) => s.seconds || 0).join(', ')} s`;

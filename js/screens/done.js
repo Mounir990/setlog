@@ -4,6 +4,7 @@ import { h } from '../dom.js';
 import { data } from '../store.js';
 import { home } from '../router.js';
 import { bestLong } from '../format.js';
+import { exName } from '../plan.js';
 import { newBests, sessionMinutes } from '../progression.js';
 import { underlined, iconButton } from '../ui.js';
 
@@ -48,7 +49,7 @@ export function done({ sid }, ctx) {
             h(
               'div',
               { class: 'row' },
-              h('span', { class: 'name' }, b.ex.name),
+              h('span', { class: 'name' }, exName(b.ex)),
               h('span', { class: 'end' }, h('span', { class: 'muted' }, bestLong(b.ex, b.value)), h('span', { class: 'pill' }, 'PR')),
             ),
           ),

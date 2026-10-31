@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 import { data, persist, replaceAll, SCHEMA_VERSION } from '../store.js';
 import { go, back } from '../router.js';
 import { clock, targetLabel, ago } from '../format.js';
-import { CATALOG, makeExercise } from '../plan.js';
+import { CATALOG, makeExercise, flatten } from '../plan.js';
 import { underlined, iconButton, stepper, bigStepper, segmented, sheet } from '../ui.js';
 
 const countLabel = (n) => `${n} ${n === 1 ? 'exercise' : 'exercises'}`;
@@ -189,7 +189,7 @@ export function editSession({ sid }, ctx) {
 
   const makeRow = (ex) => {
     const grip = h('button', { class: 'grip', type: 'button', 'aria-label': `Reorder ${ex.name}. Use the up and down arrow keys.` }, icon('grip-vertical'));
-    const name = h('button', { class: 'row-name', type: 'button' }, h('span', { class: 'name' }, ex.name), h('span', { class: 'muted sec' }, targetLabel(ex)));
+    const name = h('button', { class: 'row-name', type: 'button' }, h('span', { class: 'name' }, ex.name), h('span', { class: 'muted sec' }, targetLabel(flatten(ex)[0])));
     const main = h('div', { class: 'swipe-main row' }, grip, name);
     const swap = h('button', { class: 'swipe-act', type: 'button', onclick: () => go(`/plan/${sid}/swap/${encodeURIComponent(ex.id)}`) }, 'Swap');
     const remove = h(
@@ -369,16 +369,16 @@ function pickerSheet({ sid, ctx, title, taken, onPick }) {
   };
 
   const showList = () => {
-    const rows = CATALOG.filter((t) => !taken.has(t.slug)).map((t) =>
+    const rows = CATALOG.filter((t) => !taken.has(t.group || t.slug)).map((t) =>
       h(
         'button',
         {
           class: 'row top-line',
           type: 'button',
-          onclick: () => pick({ ...makeExercise(sid, t), id: uniqueId(ps, `${sid}.${t.slug}`) }),
+          onclick: () => pick({ ...makeExercise(sid, t), id: uniqueId(ps, `${sid}.${t.group || t.slug}`) }),
         },
         h('span', { class: 'name' }, t.name),
-        h('span', { class: 'muted sec' }, targetLabel(t)),
+        h('span', { class: 'muted sec' }, targetLabel(flatten(t)[0])),
       ),
     );
     body.replaceChildren(
@@ -436,7 +436,7 @@ function pickerSheet({ sid, ctx, title, taken, onPick }) {
 export function addSheet({ sid }, ctx) {
   const ps = findPlanSession(sid);
   if (!ps) return { redirect: '/plan' };
-  const taken = new Set(ps.exercises.map((e) => e.slug).filter(Boolean));
+  const taken = new Set(ps.exercises.map((e) => e.group || e.slug).filter(Boolean));
   return pickerSheet({ sid, ctx, title: 'Add exercise', taken, onPick: (p, ex) => p.exercises.push(ex) });
 }
 
@@ -445,7 +445,7 @@ export function swapSheet({ sid, exId }, ctx) {
   if (!ps) return { redirect: '/plan' };
   const target = ps.exercises.find((e) => e.id === exId);
   if (!target) return { redirect: `/plan/${sid}` };
-  const taken = new Set(ps.exercises.filter((e) => e.id !== exId).map((e) => e.slug).filter(Boolean));
+  const taken = new Set(ps.exercises.filter((e) => e.id !== exId).map((e) => e.group || e.slug).filter(Boolean));
   return pickerSheet({
     sid,
     ctx,
@@ -462,19 +462,29 @@ export function swapSheet({ sid, exId }, ctx) {
 export function editExercise({ sid, exId }) {
   const ps = findPlanSession(sid);
   if (!ps) return { redirect: '/plan' };
-  const ex = ps.exercises.find((e) => e.id === exId);
-  if (!ex) return { redirect: `/plan/${sid}` };
+  const card = ps.exercises.find((e) => e.id === exId);
+  if (!card) return { redirect: `/plan/${sid}` };
 
   const host = h('section', { class: 'glass list' });
+  let vi = 0; // which variant is being edited
+
+  // Sets and rest live on the card; reps, step, progression and target live on the variant or part (or the card).
+  const targets = () => {
+    if (card.parts) return card.parts.map((p, i) => ({ obj: p, title: `${'AB'[i]} · ${p.name}` }));
+    if (card.variants) return [{ obj: card.variants[vi], title: null }];
+    return [{ obj: card, title: null }];
+  };
+  const get = (obj, prop) => (obj[prop] !== undefined ? obj[prop] : card[prop]);
+  const kindOf = (obj) => obj.kind || card.kind;
 
   const row = (label, control) => h('div', { class: 'row' }, h('span', { class: 'name' }, label), h('span', { class: 'end' }, control));
   const stack = (label, control) => h('div', { class: 'row stack' }, h('span', { class: 'name' }, label), control);
-  const num2 = (label, prop, o = {}) =>
+  const num2 = (label, obj, prop, o = {}) =>
     row(
       label,
       stepper({
         label,
-        value: ex[prop] || 0,
+        value: get(obj, prop) || 0,
         step: o.step || 1,
         min: o.min ?? 1,
         max: o.max ?? 99,
@@ -482,7 +492,7 @@ export function editExercise({ sid, exId }) {
         format: o.format,
         inline: true,
         onChange: (v) => {
-          ex[prop] = v;
+          obj[prop] = v;
           if (o.after) o.after(v);
           persist();
           if (o.redraw) draw();
@@ -490,29 +500,25 @@ export function editExercise({ sid, exId }) {
       }),
     );
 
-  function draw() {
-    const rows = [num2('Sets', 'sets', { max: 12 })];
-
-    if (ex.kind === 'pullup' || ex.kind === 'easy') {
-      rows.push(
-        num2('Clean reps', 'repMin', {
-          max: 30,
-          after: (v) => (ex.repMax = v),
-        }),
-      );
-    } else if (ex.kind === 'weighted') {
-      rows.push(
-        num2('Reps from', 'repMin', {
+  // Rows for one variant, part or plain exercise.
+  const kindRows = (obj) => {
+    const kind = kindOf(obj);
+    const out = [];
+    if (kind === 'pullup' || kind === 'easy') {
+      out.push(num2('Clean reps', obj, 'repMin', { max: 30, after: (v) => (obj.repMax = v) }));
+    } else if (kind === 'weighted') {
+      out.push(
+        num2('Reps from', obj, 'repMin', {
           max: 50,
           redraw: true,
           after: (v) => {
-            if (ex.repMax < v || ex.progression === 'fixed') ex.repMax = v;
+            if (get(obj, 'repMax') < v || get(obj, 'progression') === 'fixed') obj.repMax = v;
           },
         }),
       );
-      if (ex.progression !== 'fixed') rows.push(num2('Reps up to', 'repMax', { min: ex.repMin, max: 50 }));
-      rows.push(num2('Weight step, kg', 'step', { step: 0.5, min: 0.5, max: 20, decimal: true }));
-      rows.push(
+      if (get(obj, 'progression') !== 'fixed') out.push(num2('Reps up to', obj, 'repMax', { min: get(obj, 'repMin'), max: 50 }));
+      out.push(num2('Weight step, kg', obj, 'step', { step: 0.5, min: 0.5, max: 20, decimal: true }));
+      out.push(
         stack(
           'Progression',
           segmented({
@@ -522,11 +528,11 @@ export function editExercise({ sid, exId }) {
               { value: 'fixed', label: 'Fixed reps' },
               { value: 'none', label: 'Off' },
             ],
-            value: ex.progression,
+            value: get(obj, 'progression'),
             onChange: (v) => {
-              ex.progression = v;
-              if (v === 'fixed') ex.repMax = ex.repMin;
-              else if (v === 'double' && ex.repMax <= ex.repMin) ex.repMax = ex.repMin + 2;
+              obj.progression = v;
+              if (v === 'fixed') obj.repMax = get(obj, 'repMin');
+              else if (v === 'double' && get(obj, 'repMax') <= get(obj, 'repMin')) obj.repMax = get(obj, 'repMin') + 2;
               persist();
               draw();
             },
@@ -534,8 +540,8 @@ export function editExercise({ sid, exId }) {
         ),
       );
     } else {
-      const unit = ex.kind === 'time' ? 'Seconds' : 'Reps';
-      rows.push(
+      const unit = kind === 'time' ? 'Seconds' : 'Reps';
+      out.push(
         stack(
           'Target',
           segmented({
@@ -544,42 +550,87 @@ export function editExercise({ sid, exId }) {
               { value: 'max', label: 'Max' },
               { value: 'fixed', label: 'Fixed' },
             ],
-            value: ex.max ? 'max' : 'fixed',
+            value: get(obj, 'max') ? 'max' : 'fixed',
             onChange: (v) => {
-              ex.max = v === 'max';
-              if (ex.max) ex.repMin = ex.repMax = 0;
-              else if (!ex.repMin) ex.repMin = ex.repMax = ex.kind === 'time' ? 30 : 8;
+              obj.max = v === 'max';
+              if (obj.max) obj.repMin = obj.repMax = 0;
+              else if (!get(obj, 'repMin')) obj.repMin = obj.repMax = kind === 'time' ? 30 : 8;
               persist();
               draw();
             },
           }),
         ),
       );
-      if (!ex.max) rows.push(num2(unit, 'repMin', { max: 300, after: (v) => (ex.repMax = v) }));
+      if (!get(obj, 'max')) out.push(num2(unit, obj, 'repMin', { max: 300, after: (v) => (obj.repMax = v) }));
     }
+    return out;
+  };
 
-    rows.push(num2('Rest', 'restSec', { step: 15, min: 15, max: 600, format: clock }));
+  function draw() {
+    const rows = [];
+    if (card.variants && card.variants.length > 1) {
+      rows.push(
+        stack(
+          'Variant',
+          segmented({
+            label: 'Variant',
+            options: card.variants.map((v, i) => ({ value: i, label: v.label })),
+            value: vi,
+            onChange: (i) => {
+              vi = i;
+              draw();
+            },
+          }),
+        ),
+      );
+    }
+    rows.push(num2(card.parts ? 'Rounds' : 'Sets', card, 'sets', { max: 12 }));
+    for (const t of targets()) {
+      if (t.title) rows.push(h('div', { class: 'row' }, h('span', { class: 'label' }, t.title)));
+      rows.push(...kindRows(t.obj));
+    }
+    if (targets().some((t) => kindOf(t.obj) === 'weighted')) {
+      rows.push(
+        stack(
+          'Dropset',
+          segmented({
+            label: 'Dropset',
+            options: [
+              { value: 'off', label: 'Off' },
+              { value: 'on', label: 'On' },
+            ],
+            value: card.dropset ? 'on' : 'off',
+            onChange: (v) => {
+              card.dropset = v === 'on';
+              persist();
+            },
+          }),
+        ),
+      );
+    }
+    rows.push(num2(card.parts ? 'Rest after the pair' : 'Rest', card, 'restSec', { step: 15, min: 15, max: 600, format: clock }));
     host.replaceChildren(...rows);
   }
   draw();
 
+  const first = flatten(card)[0];
   const el = h(
     'main',
     { class: 'screen' },
     h('div', { class: 'top' }, iconButton('chevron-left', 'Back', () => back(`/plan/${sid}`))),
-    h('div', { class: 'title-row' }, h('h1', { class: 'title' }, ex.name), h('span', { class: 'muted sec' }, targetLabel(ex))),
+    h('div', { class: 'title-row' }, h('h1', { class: 'title' }, card.name), h('span', { class: 'muted sec' }, targetLabel(first))),
     host,
     h(
       'section',
       { class: 'glass list' },
-      h('button', { class: 'row', type: 'button', onclick: () => go(`/plan/${sid}/swap/${encodeURIComponent(ex.id)}`) }, h('span', { class: 'name' }, 'Swap exercise'), icon('chevron-right')),
+      h('button', { class: 'row', type: 'button', onclick: () => go(`/plan/${sid}/swap/${encodeURIComponent(card.id)}`) }, h('span', { class: 'name' }, 'Swap exercise'), icon('chevron-right')),
       h(
         'button',
         {
           class: 'row',
           type: 'button',
           onclick: () => {
-            ps.exercises = ps.exercises.filter((e) => e.id !== ex.id);
+            ps.exercises = ps.exercises.filter((e) => e.id !== card.id);
             persist();
             back(`/plan/${sid}`);
           },

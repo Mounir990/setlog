@@ -2,7 +2,7 @@
 
 A personal workout tracker for one user. It guides each training session, logs every set and shows progress per exercise. Vanilla HTML, CSS and JavaScript (ES modules), no framework, no build step, no backend, no accounts. Installable as a PWA and fully offline.
 
-Status: complete (training loop, progress charts, plan editing, backup, exercise animations, offline, accessibility fallbacks).
+Status: complete. The program is Push day, Pull day, Leg day (a rotation that ignores weekdays), with variants (Free / Guided, Lat pulldown / Pull-ups ...), a dropset exercise, a calf-raise superset, one-hand and bodyweight lifts. Old exercises stay in Progress as read-only archived entries.
 
 ## Run locally
 
@@ -40,9 +40,19 @@ All app files, the font and the icons are cached on first load, so the app works
 
 Every exercise screen shows a looping stick-figure animation (white lines on glass); tapping it pauses it. The figures are drawn in code from two poses per exercise (`js/stickfigures.js`), so there is nothing to download and they work offline.
 
-To use your own animation for an exercise, drop `media/exercises/<slug>.gif` (or `.webp`, `.mp4`) into the repo. A file with the right slug takes priority over the built-in figure. For offline use, add its path to `ASSETS` in `sw.js` and bump `CACHE`. Custom exercises you add in the app show a plain placeholder.
+To use your own animation for an exercise:
 
-Slugs: `pull-ups`, `slow-negatives`, `barbell-row`, `lat-pulldown`, `face-pulls`, `biceps-curls`, `dead-hang`, `push-ups`, `bench-press`, `overhead-press`, `incline-dumbbell-press`, `lateral-raises`, `triceps-pushdown`, `easy-pull-ups`, `squat`, `romanian-deadlift`, `leg-press`, `leg-curl`, `calf-raises`, `ab-wheel`.
+1. Put `<slug>.gif` (or `.webp`, `.mp4`) in `media/exercises/`.
+2. List the file name in `media/exercises/index.json`, for example `{ "files": ["pull-ups-wide.gif"] }`.
+3. For offline use, add its path to `ASSETS` in `sw.js` and bump `CACHE`.
+
+Custom exercises you add in the app show a plain placeholder.
+
+Slugs: `incline-machine-press`, `cable-lateral-raise`, `bench-press-free`, `bench-press-guided`, `shoulder-press-machine`, `dips`, `skullcrusher-cable`, `skullcrusher-free`, `triceps-pushdown-one-hand`, `lat-pulldown-wide`, `pull-ups-wide`, `cable-rear-delt-fly`, `t-bar-row`, `rowing-machine-wide`, `lat-pulldown-narrow`, `pull-ups-narrow`, `back-extension-free`, `back-extension-machine`, `incline-biceps-curl`, `hammer-curl`, `standing-calf-raise`, `seated-calf-raise`, `hex-squat`, `lying-leg-curl`, `leg-extension`.
+
+## Program model
+
+A plan session holds cards (`js/plan.js`). A card is a plain exercise, an exercise with variants (each variant has its own key, so history, bests and "Try X" are never mixed) or a superset (two parts, A and B, each with its own history; `sets` counts rounds). A set can carry up to three drop entries (about 20% lighter each) that are stored and shown but never count toward progression or bests. Progression is double progression with the 10-day gap rule; the strict pull-up ladder (2 x 4, 2 x 5, 2 x 6, then +2.5 kg at 2 x 4) applies to the pull-ups variants.
 
 ## Structure
 
@@ -64,7 +74,7 @@ scripts/make-icons.mjs  regenerates the app icons (not part of the app)
 
 ## Data
 
-Everything is stored on the device in `localStorage` under `setlog.data` (schema version 1). Clearing browser data erases history, so use Plan, then Back up data, to export a JSON file now and then. Import restores it.
+Everything is stored on the device in `localStorage` under `setlog.data` (schema version 2). Version 1 data (the old Upper back / Upper front / Legs program) is upgraded on first open: history is kept, bench press, lat pulldown, leg curl, calf raises and pull-ups continue under their new keys, the other old exercises are archived, and the previous plan is kept in `archive` inside the data. Clearing browser data erases history, so use Plan, then Back up data, to export a JSON file now and then. Import restores it.
 
 ## Credits
 

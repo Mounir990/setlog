@@ -134,6 +134,17 @@ function boot() {
     /* not available */
   }
   if ('serviceWorker' in navigator) {
+    // When a new version takes over, reload once so the open app (including an installed home-screen app)
+    // runs the new code instead of writing old-format data. Typing is never interrupted.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController || reloaded) return;
+      const el = document.activeElement;
+      if (el && el.tagName === 'INPUT') return;
+      reloaded = true;
+      location.reload();
+    });
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     });

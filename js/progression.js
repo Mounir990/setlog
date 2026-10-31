@@ -1,7 +1,7 @@
 // Everything derived from logged data: history, prefill, hints, bests, rotation, weekly counts.
 // Nothing here is stored; it is recomputed from `data.sessions` and `data.plan`.
 
-import { rotationOrder } from './plan.js';
+import { rotationOrder, flatten } from './plan.js';
 
 export const DAY = 86400000;
 const round2 = (n) => Math.round(n * 100) / 100;
@@ -22,12 +22,18 @@ export function historyFor(d, key, excludeId) {
   return out;
 }
 
-export const setsOf = (session, ex) =>
-  session.sets.filter((s) => s.exerciseId === ex.id).sort((a, b) => a.setIndex - b.setIndex);
+// Sets of a whole card (every variant or part), ordered.
+export const setsOf = (session, card) =>
+  session.sets.filter((s) => s.exerciseId === card.id).sort((a, b) => a.setIndex - b.setIndex || (a.part || '').localeCompare(b.part || ''));
 
-export function exerciseState(session, ex) {
-  const logged = setsOf(session, ex).length;
-  return { logged, total: ex.sets, done: logged >= ex.sets };
+// Sets of one flat exercise (one variant or part).
+export const setsOfKey = (session, ex) => setsOf(session, ex).filter((s) => s.exerciseKey === ex.key);
+
+// A superset round is done once part B is logged; otherwise every logged set counts.
+export function exerciseState(session, card) {
+  const all = setsOf(session, card);
+  const logged = card.parts ? all.filter((s) => s.part === 'B').length : all.length;
+  return { logged, total: card.sets, done: logged >= card.sets };
 }
 
 // The exercise to mark as current: one that is partly done, otherwise the first not done.
@@ -41,7 +47,7 @@ export function currentExercise(session) {
 function defaults(ex) {
   switch (ex.kind) {
     case 'weighted':
-      return { weight: 0, reps: ex.repMin };
+      return ex.dropset ? { weight: 0, reps: ex.repMin, drops: [] } : { weight: 0, reps: ex.repMin };
     case 'pullup':
     case 'easy':
       return { cleanReps: ex.repMin, partialReps: 0 };
@@ -55,8 +61,19 @@ function defaults(ex) {
 export function setValues(ex, s) {
   const d = defaults(ex);
   const out = {};
-  for (const k of Object.keys(d)) out[k] = typeof s[k] === 'number' ? s[k] : d[k];
+  for (const k of Object.keys(d)) {
+    if (k === 'drops') out.drops = Array.isArray(s.drops) ? s.drops.map((x) => ({ weight: x.weight, reps: x.reps })) : [];
+    else out[k] = typeof s[k] === 'number' ? s[k] : d[k];
+  }
   return out;
+}
+
+// Weight of a new drop: about 20% lighter than the entry before, rounded to the step, always lighter.
+export function dropWeight(ex, previous) {
+  const step = ex.step || 1;
+  let w = Math.round((previous * 0.8) / step) * step;
+  if (w >= previous) w = previous - step;
+  return Math.max(0, round2(w));
 }
 
 // Values for the stepper of a given set: same set number of the last session, else the plan default.
@@ -78,7 +95,7 @@ export function prefill(d, session, ex, setIndex) {
     }
   }
   if (ex.kind === 'weighted') {
-    const prev = setsOf(session, ex)
+    const prev = setsOfKey(session, ex)
       .filter((s) => s.setIndex < setIndex)
       .pop();
     if (prev) {
@@ -130,8 +147,8 @@ export function tryWeight(d, session, ex) {
   const last = historyFor(d, ex.key, session.id)[0];
   if (!last || last.sets.length < ex.sets) return null;
   const sets = last.sets.slice(0, ex.sets);
-  const w = sets[sets.length - 1].weight;
-  if (!sets.every((s) => s.weight === w && s.reps >= ex.repMax)) return null;
+  const w = sets[sets.length - 1].weight || 0;
+  if (!sets.every((s) => (s.weight || 0) === w && s.reps >= ex.repMax)) return null;
   // Gap rule: after more than 10 days away, never suggest an increase.
   const latest = Math.max(...sets.map((s) => s.completedAt || 0));
   if (Date.now() - latest > 10 * DAY) return null;
@@ -139,6 +156,8 @@ export function tryWeight(d, session, ex) {
 }
 
 // ---- Bests ----
+
+export const BODYWEIGHT_BASE = 1000;
 
 // Best value of one exercise within the given sets, or 0.
 export function bestValue(ex, sets) {
@@ -148,7 +167,10 @@ export function bestValue(ex, sets) {
       case 'pullup':
         return s.cleanReps || 0;
       case 'weighted':
-        return s.reps >= ex.repMin ? s.weight || 0 : 0;
+        if (s.reps < ex.repMin) return 0;
+        // Bodyweight lifts (dips): added kg beats reps. Reps alone score below BODYWEIGHT_BASE.
+        if (ex.bodyweight) return s.weight > 0 ? BODYWEIGHT_BASE + s.weight : s.reps || 0;
+        return s.weight || 0;
       case 'time':
         return s.seconds || 0;
       case 'easy':
@@ -170,7 +192,7 @@ export function bestFor(d, ex) {
 export function newBests(d, session) {
   const out = [];
   const seen = new Set();
-  for (const ex of session.exercises) {
+  for (const ex of session.exercises.flatMap(flatten)) {
     if (seen.has(ex.key) || ex.trackBest === false) continue;
     seen.add(ex.key);
     const now = bestValue(ex, session.sets.filter((s) => s.exerciseKey === ex.key));
@@ -208,9 +230,8 @@ export function weekCount(d) {
   const start = weekStart();
   const end = start + 7 * DAY;
   const fullIds = new Set(d.plan.sessions.filter((s) => s.kind === 'full').map((s) => s.id));
-  return doneSessions(d).filter(
-    (s) => fullIds.has(s.planSessionId) && s.finishedAt >= start && s.finishedAt < end,
-  ).length;
+  const isFull = (s) => (s.kind ? s.kind === 'full' : fullIds.has(s.planSessionId));
+  return doneSessions(d).filter((s) => isFull(s) && s.finishedAt >= start && s.finishedAt < end).length;
 }
 
 export const recentSessions = (d, n = 3) => doneSessions(d).slice(0, n);
@@ -231,7 +252,8 @@ export function sessionMetric(ex, sets) {
     case 'pullup':
       return Math.max(0, ...sets.map((s) => s.cleanReps || 0));
     case 'weighted':
-      return bestValue(ex, sets);
+      // Bodyweight lifts chart the best set in reps; the added kg show in the best and the list.
+      return ex.bodyweight ? Math.max(0, ...sets.map((s) => s.reps || 0)) : bestValue(ex, sets);
     case 'time':
       return Math.max(0, ...sets.map((s) => s.seconds || 0));
     default:
@@ -246,7 +268,7 @@ export function metricLabel(ex) {
     case 'pullup':
       return 'Clean reps, best set';
     case 'weighted':
-      return 'Weight in kg, best set';
+      return ex.bodyweight ? 'Reps, best set' : 'Weight in kg, best set';
     case 'time':
       return 'Hold in seconds, best set';
     default:
@@ -264,27 +286,77 @@ export function metricSeries(d, ex) {
   return out;
 }
 
-// Exercises with logged history, in plan order. Exercises removed from the plan keep their history.
-export function trackedExercises(d) {
-  const defs = new Map();
-  for (const ps of d.plan.sessions) for (const e of ps.exercises) if (!defs.has(e.key)) defs.set(e.key, e);
-  for (const s of d.sessions.slice().sort((a, b) => b.startedAt - a.startedAt)) {
-    for (const e of s.exercises) if (!defs.has(e.key)) defs.set(e.key, e);
-  }
+// Progress entries: one per exercise, with a switch between variants. Active exercises (in the plan) come first
+// in plan order, then archived ones (logged before but no longer in the plan). Only exercises with history appear.
+// Group: { name, archived, entries: [{ key, label, ex }] }.
+export function progressGroups(d) {
   const logged = new Set(doneSessions(d).flatMap((s) => s.sets.map((x) => x.exerciseKey)));
-  return [...defs.values()].filter((e) => e.trackBest !== false && logged.has(e.key));
+  const groups = [];
+  const active = new Set();
+
+  const entriesOf = (card) => flatten(card).map((ex) => ({ key: ex.key, label: ex.variantLabel || null, ex }));
+  const addCard = (card, archived) => {
+    const entries = entriesOf(card).filter((e) => e.ex.trackBest !== false);
+    if (card.parts) {
+      for (const e of entries) groups.push({ name: e.ex.name, archived, entries: [e] });
+    } else if (entries.length) {
+      groups.push({ name: card.name, archived, entries });
+    }
+  };
+
+  for (const ps of d.plan.sessions) {
+    for (const card of ps.exercises) {
+      for (const ex of flatten(card)) active.add(ex.key);
+      addCard(card, false);
+    }
+  }
+  const seen = new Set(active);
+  for (const s of d.sessions.slice().sort((a, b) => b.startedAt - a.startedAt)) {
+    for (const card of s.exercises || []) {
+      const old = entriesOf(card).filter((e) => !seen.has(e.key) && e.ex.trackBest !== false);
+      for (const e of old) {
+        seen.add(e.key);
+        groups.push({ name: e.ex.variantLabel ? `${e.ex.name}, ${e.ex.variantLabel}` : e.ex.name, archived: true, entries: [{ ...e, label: null }] });
+      }
+    }
+  }
+  return groups
+    .map((g) => ({ ...g, entries: g.entries.filter((e) => logged.has(e.key)) }))
+    .filter((g) => g.entries.length);
 }
 
+export function groupOfKey(d, key) {
+  return progressGroups(d).find((g) => g.entries.some((e) => e.key === key)) || null;
+}
+
+// Flat exercise definition for a key: from the plan first, then from session snapshots.
 export function findExercise(d, key) {
   for (const ps of d.plan.sessions) {
-    const e = ps.exercises.find((x) => x.key === key);
-    if (e) return e;
+    for (const card of ps.exercises) {
+      const ex = flatten(card).find((e) => e.key === key);
+      if (ex) return ex;
+    }
   }
   for (const s of d.sessions) {
-    const e = s.exercises.find((x) => x.key === key);
-    if (e) return e;
+    for (const card of s.exercises || []) {
+      const ex = flatten(card).find((e) => e.key === key);
+      if (ex) return ex;
+    }
   }
   return null;
+}
+
+// Variant to use for a card: the one picked in this session, else the last one used, else the first.
+export function chosenKey(d, session, card) {
+  if (!card.variants) return null;
+  const picked = session.variants && session.variants[card.id];
+  if (picked && card.variants.some((v) => v.key === picked)) return picked;
+  const keys = new Set(card.variants.map((v) => v.key));
+  for (const s of doneSessions(d)) {
+    const hit = s.sets.find((x) => keys.has(x.exerciseKey));
+    if (hit) return hit.exerciseKey;
+  }
+  return card.variants[0].key;
 }
 
 export const latestBodyweight = (d) => (d.bodyweight.length ? d.bodyweight[d.bodyweight.length - 1] : null);

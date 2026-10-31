@@ -55,7 +55,7 @@ export function today(_params, ctx) {
       h('div', { class: 'label' }, 'Recent'),
       recent.length
         ? recent.map((s) =>
-            h('div', { class: 'row' }, h('span', { class: 'name' }, s.name), h('span', { class: 'muted' }, weekday(s.finishedAt))),
+            h('div', { class: 'row' }, h('span', { class: 'name' }, s.name || 'Session'), h('span', { class: 'muted' }, weekday(s.finishedAt))),
           )
         : h('div', { class: 'row' }, h('span', { class: 'dim' }, 'No sessions yet')),
     ),

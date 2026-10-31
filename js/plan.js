@@ -1,110 +1,165 @@
-// Default plan, preloaded as editable data on first run.
+// Default plan (Push, Pull, Leg), preloaded as editable data on first run.
 //
-// Exercise fields:
-//   kind         pullup (strict) | easy (easy pull-ups) | weighted | reps | time
-//   sets         planned number of sets
+// A plan session holds "cards". A card is one entry of the session overview:
+//   - a plain exercise (one key),
+//   - an exercise with variants (Free / Guided, Lat pulldown / Pull-ups ...): each variant has its own key,
+//     so history, bests and "Try X" are never mixed,
+//   - a superset: two parts, A and B, each with its own key. `sets` is then the number of rounds.
+//
+// Fields (on the card, and on a variant or part where they differ):
+//   kind         pullup (strict) | easy | weighted | reps | time
+//   sets         planned sets (rounds for a superset)
 //   repMin/Max   rep range; equal values mean a fixed target. For pull-ups repMin is the starting clean-rep goal.
-//   max          true for "max" targets (push-ups, dead hang): no range, no auto goal
-//   restSec      rest after a set
-//   step         weight step in kg (weighted lifts)
+//   max          true for "max" targets: no range, no auto goal
+//   restSec      rest after a set (after the pair for a superset)
+//   step         weight step in kg
 //   progression  strict (pull-up ladder) | double (rep range) | fixed (fixed reps) | none
 //   trackBest    whether the exercise has a Best pill and PRs
+//   dropset      a set may carry up to 3 lighter "drop" entries (weighted only)
+//   bodyweight   weight is optional added kg, 0 by default (dips)
 
-const E = (slug, name, kind, sets, o = {}) => ({
-  slug,
-  name,
-  kind,
-  sets,
-  repMin: 0,
-  repMax: 0,
+const base = (o) => ({
+  kind: 'weighted',
+  sets: 2,
+  repMin: 8,
+  repMax: 12,
   max: false,
   restSec: 90,
-  step: 0,
-  progression: 'none',
+  step: 2.5,
+  progression: 'double',
   trackBest: true,
   note: '',
   ...o,
 });
 
-const lift = (slug, name, sets, repMin, repMax, restSec, step, o = {}) =>
-  E(slug, name, 'weighted', sets, {
-    repMin,
-    repMax,
-    restSec,
-    step,
-    progression: repMin === repMax ? 'fixed' : 'double',
-    ...o,
-  });
+const withProgression = (o) => {
+  const c = base(o);
+  if (!o.progression) c.progression = c.repMin === c.repMax ? 'fixed' : 'double';
+  return c;
+};
 
-const pushUps = () => E('push-ups', 'Push-ups', 'reps', 3, { max: true, restSec: 90 });
-const easyPullUps = (sets) =>
-  E('easy-pull-ups', 'Easy pull-ups', 'easy', sets, {
-    repMin: 3,
-    repMax: 3,
-    restSec: 90,
-    trackBest: false,
-    note: 'Stop well short of failure',
-  });
+// Plain exercise.
+const plain = (slug, name, o = {}) => ({ slug, key: slug, name, ...withProgression(o) });
+
+// Exercise with variants. Each variant: { key, label, ...overrides }.
+const withVariants = (group, name, variants, o = {}) => ({
+  group,
+  name,
+  variants: variants.map((v) => ({ slug: v.key, ...v })),
+  ...withProgression(o),
+});
+
+// Superset: parts are { key, name, ...overrides }.
+const superset = (group, name, parts, o = {}) => ({
+  group,
+  name,
+  superset: true,
+  parts: parts.map((p) => ({ slug: p.key, ...p })),
+  ...withProgression(o),
+});
+
+const pullups = (key, label) => ({
+  key,
+  label,
+  kind: 'pullup',
+  repMin: 4,
+  repMax: 4,
+  progression: 'strict',
+});
 
 const TEMPLATES = {
-  'upper-back': {
-    name: 'Upper back',
+  push: {
+    name: 'Push day',
     kind: 'full',
     exercises: [
-      E('pull-ups', 'Pull-ups', 'pullup', 5, { repMin: 4, repMax: 4, restSec: 150, progression: 'strict' }),
-      E('slow-negatives', 'Slow negatives', 'reps', 2, {
-        repMin: 3,
-        repMax: 3,
-        restSec: 90,
-        trackBest: false,
-        note: '4 to 5 sec down',
-      }),
-      lift('barbell-row', 'Barbell row', 4, 8, 10, 120, 2.5),
-      lift('lat-pulldown', 'Lat pulldown', 3, 8, 12, 90, 2.5, { note: 'Neutral grip' }),
-      lift('face-pulls', 'Face pulls', 3, 12, 15, 60, 2.5),
-      lift('biceps-curls', 'Biceps curls', 3, 8, 12, 60, 1),
-      E('dead-hang', 'Dead hang', 'time', 2, { max: true, restSec: 60 }),
-      pushUps(),
+      plain('incline-machine-press', 'Incline machine press', { repMin: 8, repMax: 12, restSec: 120, note: 'Upper chest' }),
+      plain('cable-lateral-raise', 'Cable lateral raise', { repMin: 10, repMax: 15, restSec: 60, step: 1, dropset: true }),
+      withVariants(
+        'bench-press',
+        'Bench press',
+        [
+          { key: 'bench-press-free', label: 'Free' },
+          { key: 'bench-press-guided', label: 'Guided' },
+        ],
+        { repMin: 6, repMax: 10, restSec: 150 },
+      ),
+      plain('shoulder-press-machine', 'Shoulder press machine', { repMin: 8, repMax: 12, restSec: 120 }),
+      plain('dips', 'Dips', { repMin: 8, repMax: 12, restSec: 120, bodyweight: true, note: 'Bodyweight, add kg when ready' }),
+      withVariants(
+        'skullcrusher',
+        'Skullcrusher',
+        [
+          { key: 'skullcrusher-cable', label: 'Cable' },
+          { key: 'skullcrusher-free', label: 'Free' },
+        ],
+        { repMin: 10, repMax: 12, restSec: 90 },
+      ),
+      plain('triceps-pushdown-one-hand', 'Triceps pushdown, one hand', { repMin: 10, repMax: 15, restSec: 60, step: 1, note: 'per arm' }),
     ],
   },
-  'upper-front': {
-    name: 'Upper front',
+  pull: {
+    name: 'Pull day',
     kind: 'full',
     exercises: [
-      lift('bench-press', 'Bench press', 4, 6, 8, 150, 2.5),
-      lift('overhead-press', 'Overhead press', 3, 8, 8, 120, 2.5),
-      lift('incline-dumbbell-press', 'Incline dumbbell press', 3, 10, 10, 90, 2),
-      lift('lateral-raises', 'Lateral raises', 3, 12, 15, 60, 1),
-      lift('triceps-pushdown', 'Triceps pushdown', 3, 10, 12, 60, 2.5),
-      easyPullUps(3),
-      pushUps(),
+      withVariants(
+        'wide-grip',
+        'Wide grip',
+        [{ key: 'lat-pulldown-wide', label: 'Lat pulldown' }, pullups('pull-ups-wide', 'Pull-ups')],
+        { repMin: 8, repMax: 12, restSec: 120 },
+      ),
+      plain('cable-rear-delt-fly', 'Cable rear delt fly', { repMin: 12, repMax: 15, restSec: 60, step: 1 }),
+      withVariants(
+        'row-wide',
+        'Row, wide grip',
+        [
+          { key: 't-bar-row', label: 'T-bar' },
+          { key: 'rowing-machine-wide', label: 'Machine' },
+        ],
+        { repMin: 8, repMax: 12, restSec: 120 },
+      ),
+      withVariants(
+        'narrow-grip',
+        'Narrow grip',
+        [{ key: 'lat-pulldown-narrow', label: 'Lat pulldown' }, pullups('pull-ups-narrow', 'Pull-ups')],
+        { repMin: 8, repMax: 12, restSec: 120 },
+      ),
+      withVariants(
+        'back-extension',
+        'Lower back extension',
+        [
+          { key: 'back-extension-free', label: 'Free', bodyweight: true },
+          { key: 'back-extension-machine', label: 'Machine' },
+        ],
+        { repMin: 10, repMax: 15, restSec: 90 },
+      ),
+      plain('incline-biceps-curl', 'Seated incline biceps curl', { repMin: 10, repMax: 12, restSec: 75, step: 1 }),
+      plain('hammer-curl', 'Hammer curl', { repMin: 8, repMax: 12, restSec: 75, step: 1 }),
     ],
   },
-  legs: {
-    name: 'Legs',
+  leg: {
+    name: 'Leg day',
     kind: 'full',
     exercises: [
-      lift('squat', 'Squat', 4, 6, 8, 150, 5),
-      lift('romanian-deadlift', 'Romanian deadlift', 3, 8, 10, 120, 5),
-      lift('leg-press', 'Leg press', 3, 10, 12, 90, 5),
-      lift('leg-curl', 'Leg curl', 3, 10, 12, 75, 2.5),
-      lift('calf-raises', 'Calf raises', 3, 12, 15, 60, 2.5),
-      E('ab-wheel', 'Ab wheel', 'reps', 3, { repMin: 8, repMax: 10, restSec: 60 }),
-      easyPullUps(2),
-      pushUps(),
+      superset(
+        'calf-raises',
+        'Calf raises',
+        [
+          { key: 'standing-calf-raise', name: 'Standing calf raise' },
+          { key: 'seated-calf-raise', name: 'Seated calf raise' },
+        ],
+        { repMin: 12, repMax: 15, restSec: 60, note: 'Superset: A, then B, then rest' },
+      ),
+      plain('hex-squat', 'Hex squat', { repMin: 6, repMax: 10, restSec: 150, note: 'Hex bar' }),
+      plain('lying-leg-curl', 'Lying leg curl', { repMin: 8, repMax: 12, restSec: 90 }),
+      plain('leg-extension', 'Leg extension', { repMin: 10, repMax: 15, restSec: 90 }),
     ],
-  },
-  quick: {
-    name: 'Quick session',
-    kind: 'quick',
-    exercises: [easyPullUps(3), pushUps()],
   },
 };
 
 export const DEFAULT_REST = 120;
 
 export function makeExercise(sessionId, tpl) {
-  return { ...tpl, id: `${sessionId}.${tpl.slug}`, key: tpl.slug };
+  return { ...structuredClone(tpl), id: `${sessionId}.${tpl.group || tpl.slug}` };
 }
 
 export function defaultPlan() {
@@ -118,15 +173,34 @@ export function defaultPlan() {
   };
 }
 
-// Built-in exercise list (first template of each slug), used by the editor and animations.
-export const CATALOG = (() => {
-  const seen = new Map();
-  for (const t of Object.values(TEMPLATES)) {
-    for (const e of t.exercises) if (!seen.has(e.slug)) seen.set(e.slug, e);
-  }
-  return [...seen.values()];
-})();
+// Built-in exercise cards offered by Add and Swap.
+export const CATALOG = Object.values(TEMPLATES).flatMap((t) => t.exercises);
 
 export function rotationOrder(plan) {
   return plan.sessions.filter((s) => s.kind === 'full');
 }
+
+// ---- Cards, variants and parts ----
+
+// Flat exercise objects for a card: one per variant or part, or the card itself.
+// Flat objects carry `id` (the card id, used to group sets), `key` (history identity) and `slug` (animation).
+export function flatten(card) {
+  const { variants, parts, ...rest } = card;
+  if (variants) {
+    return variants.map((v) => ({ ...rest, ...v, id: card.id, name: card.name, variantLabel: v.label, key: v.key, slug: v.slug || v.key }));
+  }
+  if (parts) {
+    return parts.map((p, i) => ({ ...rest, ...p, id: card.id, superset: true, part: 'AB'[i], key: p.key, slug: p.slug || p.key }));
+  }
+  return [{ ...rest }];
+}
+
+export function resolve(card, key) {
+  const flat = flatten(card);
+  return flat.find((e) => e.key === key) || flat[0];
+}
+
+export const isVariantCard = (card) => Array.isArray(card.variants) && card.variants.length > 1;
+
+// Display name of a flat exercise, with the variant when it has one.
+export const exName = (ex) => (ex.variantLabel ? `${ex.name}, ${ex.variantLabel}` : ex.name);

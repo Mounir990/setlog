@@ -4,10 +4,11 @@ import { h } from '../dom.js';
 import { icon } from '../icons.js';
 import { data, notify, persist } from '../store.js';
 import { go, back } from '../router.js';
-import { num, bestShort, dayLabel, sessionSummary, goalLabel } from '../format.js';
+import { num, bestShort, bestLong, dayLabel, sessionSummary, goalLabel } from '../format.js';
 import {
   weekCount,
-  trackedExercises,
+  progressGroups,
+  groupOfKey,
   findExercise,
   metricSeries,
   metricLabel,
@@ -23,35 +24,44 @@ import { lineChart, sparkline } from '../chart.js';
 const DEFAULT_BODYWEIGHT = 77;
 
 function rowValue(ex, series, best) {
-  switch (ex.kind) {
-    case 'pullup':
-      return `${num(best)} clean`;
-    case 'weighted':
-      return best ? `${num(best)} kg` : '-';
-    case 'time':
-      return `${num(best)} s`;
-    default:
-      // Push-ups show the total of the latest session; other rep exercises show the best set.
-      return ex.key === 'push-ups' ? `${num(series[series.length - 1].v)} reps` : `${num(best)} reps`;
+  // Push-ups show the total of the latest session; everything else shows the best.
+  if (ex.key === 'push-ups') return `${num(series[series.length - 1].v)} reps`;
+  return best ? bestLong(ex, best) : '-';
+}
+
+// Entry of a group that was logged most recently (the variant you currently use).
+function latestEntry(d, group) {
+  let pick = group.entries[0];
+  let at = -1;
+  for (const e of group.entries) {
+    const last = historyFor(d, e.key)[0];
+    if (last && last.session.finishedAt > at) {
+      at = last.session.finishedAt;
+      pick = e;
+    }
   }
+  return pick;
 }
 
 export function progress() {
   const d = data();
   const count = weekCount(d);
-  const tracked = trackedExercises(d);
+  const groups = progressGroups(d);
   const bw = latestBodyweight(d);
 
-  const rows = tracked.map((ex) => {
-    const series = metricSeries(d, ex);
-    const best = bestFor(d, ex);
+  const row = (g) => {
+    const entry = latestEntry(d, g);
+    const series = metricSeries(d, entry.ex);
+    const best = bestFor(d, entry.ex);
     return h(
       'button',
-      { class: 'row', type: 'button', onclick: () => go(`/progress/ex/${encodeURIComponent(ex.key)}`) },
-      h('span', { class: 'name' }, ex.name),
-      h('span', { class: 'end' }, sparkline(series.map((p) => p.v)), h('span', { class: 'muted sec value' }, series.length ? rowValue(ex, series, best) : '-')),
+      { class: 'row' + (g.archived ? ' dim' : ''), type: 'button', onclick: () => go(`/progress/ex/${encodeURIComponent(entry.key)}`) },
+      h('span', { class: 'name' }, g.name, entry.label ? h('span', { class: 'cap block muted' }, entry.label) : null),
+      h('span', { class: 'end' }, sparkline(series.map((p) => p.v)), h('span', { class: 'sec value' + (g.archived ? '' : ' muted') }, series.length ? rowValue(entry.ex, series, best) : '-')),
     );
-  });
+  };
+  const active = groups.filter((g) => !g.archived);
+  const archived = groups.filter((g) => g.archived);
 
   const bodyRow = h(
     'div',
@@ -76,8 +86,10 @@ export function progress() {
       h('div', { class: 'between' }, h('span', {}, 'This week'), h('span', { class: 'amber medium' }, `${Math.min(count, 3)} of 3 sessions`)),
       h('div', { class: 'week wide' }, segs),
     ),
-    tracked.length ? null : h('p', { class: 'stub' }, 'Finish a session to see trends here.'),
-    h('section', { class: 'glass list' }, rows, bodyRow),
+    groups.length ? null : h('p', { class: 'stub' }, 'Finish a session to see trends here.'),
+    h('section', { class: 'glass list' }, active.map(row), bodyRow),
+    archived.length ? h('div', { class: 'label', style: 'margin-top:6px' }, 'Archived') : null,
+    archived.length ? h('section', { class: 'glass list' }, archived.map(row)) : null,
   );
   return { el };
 }
@@ -151,6 +163,16 @@ export function exerciseProgress({ key }) {
 
   const ex = findExercise(d, key);
   if (!ex) return { redirect: '/progress' };
+  const group = groupOfKey(d, key);
+  const switcher =
+    group && group.entries.length > 1
+      ? segmented({
+          label: 'Variant',
+          options: group.entries.map((e) => ({ value: e.key, label: e.label })),
+          value: key,
+          onChange: (k) => go(`/progress/ex/${encodeURIComponent(k)}`, { replace: true }),
+        })
+      : null;
 
   const series = metricSeries(d, ex);
   const best = bestFor(d, ex);
@@ -161,7 +183,9 @@ export function exerciseProgress({ key }) {
     'main',
     { class: 'screen' },
     h('div', { class: 'top' }, iconButton('chevron-left', 'Back', () => back('/progress'))),
-    h('div', { class: 'title-row' }, h('h1', { class: 'title' }, ex.name), best > 0 ? h('span', { class: 'pill' }, `Best ${bestShort(ex, best)}`) : null),
+    h('div', { class: 'title-row' }, h('h1', { class: 'title' }, group ? group.name : ex.name), best > 0 ? h('span', { class: 'pill' }, `Best ${bestShort(ex, best)}`) : null),
+    group && group.archived ? h('p', { class: 'note' }, 'Archived. This exercise is no longer in your plan.') : null,
+    switcher,
     periodSwitch(),
     h('section', { class: 'glass card compact' }, h('div', { class: 'label' }, metricLabel(ex)), lineChart(filterPeriod(series), `${ex.name} trend`)),
     goal

@@ -3,12 +3,13 @@
 import { h } from '../dom.js';
 import { data } from '../store.js';
 import { go, back, home } from '../router.js';
-import { exerciseState, currentExercise } from '../progression.js';
+import { exerciseState, currentExercise, chosenKey } from '../progression.js';
 import { finishSession } from '../actions.js';
 import { underlined, iconButton, checkCircle } from '../ui.js';
 
 export function overview({ sid }, ctx) {
-  const session = data().sessions.find((s) => s.id === sid);
+  const d = data();
+  const session = d.sessions.find((s) => s.id === sid);
   if (!session) return { redirect: '/' };
   if (session.status === 'done') return { redirect: `/done/${sid}` };
 
@@ -27,7 +28,14 @@ export function overview({ sid }, ctx) {
     let end;
     if (st.done) end = checkCircle();
     else if (st.logged > 0) end = h('span', { class: isCurrent ? 'muted sec' : 'sec' }, `${st.logged} of ${st.total}`);
-    else end = h('span', { class: 'sec' }, `${st.total} ${st.total === 1 ? 'set' : 'sets'}`);
+    else end = h('span', { class: 'sec' }, `${st.total} ${ex.parts ? 'rounds' : st.total === 1 ? 'set' : 'sets'}`);
+    // Second line: the variant in use, or the superset parts.
+    let sub = '';
+    if (ex.parts) sub = 'Superset';
+    else if (ex.variants && ex.variants.length > 1) {
+      const key = chosenKey(d, session, ex);
+      sub = (ex.variants.find((v) => v.key === key) || ex.variants[0]).label;
+    }
     return h(
       'button',
       {
@@ -35,7 +43,12 @@ export function overview({ sid }, ctx) {
         type: 'button',
         onclick: () => go(`/session/${sid}/${ex.id}`),
       },
-      h('span', { class: 'name' + (isCurrent ? ' amber medium' : '') }, ex.name),
+      h(
+        'span',
+        { class: 'name' + (isCurrent ? ' amber medium' : '') },
+        ex.name,
+        sub ? h('span', { class: 'cap block ' + (isCurrent ? 'muted' : '') }, sub) : null,
+      ),
       h('span', { class: 'end' }, end),
     );
   });

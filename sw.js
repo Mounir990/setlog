@@ -2,7 +2,7 @@
 // Strategy: network first (short timeout) so a new deploy shows up on the next open,
 // falling back to the cache when offline or slow. Bump CACHE when the file list changes.
 
-const CACHE = 'setlog-v4';
+const CACHE = 'setlog-v5';
 
 const ASSETS = [
   './',
@@ -37,6 +37,7 @@ const ASSETS = [
   'icons/icon-192.png',
   'icons/icon-512.png',
   'icons/apple-touch-icon.png',
+  'media/exercises/index.json',
 ];
 
 self.addEventListener('install', (event) => {

@@ -1,9 +1,11 @@
-// Screens 4, 5 and 6: exercise (pull-ups, weighted lift, push-ups and the rest state).
+// Screens 4, 5 and 6: exercise (pull-ups, weighted lift, push-ups, variants, dropsets, supersets) and the rest state.
 
 import { h } from '../dom.js';
+import { icon } from '../icons.js';
 import { data, notify } from '../store.js';
-import { go, back } from '../router.js';
+import { back } from '../router.js';
 import { setSummary, bestShort } from '../format.js';
+import { flatten, resolve } from '../plan.js';
 import {
   setsOf,
   prefill,
@@ -13,18 +15,21 @@ import {
   bestFor,
   pullupGoal,
   historyFor,
+  chosenKey,
+  dropWeight,
 } from '../progression.js';
-import { logSet, updateSet, deleteSet } from '../actions.js';
+import { logSet, updateSet, deleteSet, setVariant } from '../actions.js';
 import * as rest from '../rest.js';
-import { iconButton, stepper, checkCircle, restButton } from '../ui.js';
+import { iconButton, stepper, checkCircle, restButton, segmented } from '../ui.js';
 import { mediaBox } from '../media.js';
 
-// Unsaved stepper values, kept across re-renders: "sessionId:exerciseId:setIndex" -> values.
+// Unsaved stepper values, kept across re-renders: "sessionId:cardId:setIndex:exerciseKey" -> values.
 const drafts = new Map();
-// Which logged set is open for editing, if any.
+// Which logged set (or superset round) is open for editing, if any.
 let editing = null;
 
-const draftKey = (sid, ex, i) => `${sid}:${ex.id}:${i}`;
+const draftKey = (sid, ex, i) => `${sid}:${ex.id}:${i}:${ex.key}`;
+const copy = (v) => ({ ...v, ...(v.drops ? { drops: v.drops.map((x) => ({ ...x })) } : {}) });
 
 function fieldsFor(ex, weightedPullups) {
   switch (ex.kind) {
@@ -38,7 +43,7 @@ function fieldsFor(ex, weightedPullups) {
       ];
     case 'weighted':
       return [
-        { label: 'kg', prop: 'weight', step: ex.step || 1, decimal: true },
+        { label: ex.bodyweight ? 'Added kg' : 'kg', prop: 'weight', step: ex.step || 1, decimal: true },
         { label: 'Reps', prop: 'reps' },
       ];
     case 'time':
@@ -53,46 +58,66 @@ export function exercise({ sid, exId }) {
   const session = d.sessions.find((s) => s.id === sid);
   if (!session) return { redirect: '/' };
   if (session.status === 'done') return { redirect: `/done/${sid}` };
-  const ex = session.exercises.find((e) => e.id === exId);
-  if (!ex) return { redirect: `/session/${sid}` };
+  const card = session.exercises.find((e) => e.id === exId);
+  if (!card) return { redirect: `/session/${sid}` };
 
-  const position = session.exercises.indexOf(ex) + 1;
-  const logged = new Map(setsOf(session, ex).map((s) => [s.setIndex, s]));
+  const isSuper = Array.isArray(card.parts);
+  const flats = flatten(card);
+  const vKey = chosenKey(d, session, card);
+  const ex = isSuper ? flats[0] : resolve(card, vKey);
+  const [partA, partB] = isSuper ? flats : [];
+
+  const position = session.exercises.indexOf(card) + 1;
   const editKey = `${sid}:${exId}`;
   const editIdx = editing && editing.key === editKey ? editing.idx : null;
-  const stopEditing = () => {
-    if (editIdx != null) drafts.delete(draftKey(sid, ex, editIdx));
-    editing = null;
+
+  // Sets by round: { x } for a plain exercise, { A, B } for a superset.
+  const byIdx = new Map();
+  for (const s of setsOf(session, card)) {
+    if (!byIdx.has(s.setIndex)) byIdx.set(s.setIndex, {});
+    byIdx.get(s.setIndex)[s.part || 'x'] = s;
+  }
+  const roundDone = (i) => {
+    const e = byIdx.get(i);
+    return !!e && (isSuper ? !!e.B : !!e.x);
   };
 
   let activeIdx = null;
-  for (let i = 1; i <= ex.sets; i++) {
-    if (!logged.has(i)) {
+  for (let i = 1; i <= card.sets; i++) {
+    if (!roundDone(i)) {
       activeIdx = i;
       break;
     }
   }
+  const activeEntry = activeIdx ? byIdx.get(activeIdx) || {} : {};
+  // Superset: the part being worked on decides the animation and the button.
+  const activePart = isSuper ? (activeEntry.A ? partB : partA) : ex;
 
-  const historyExists = hasHistory(d, session, ex);
-  const best = bestFor(d, ex);
-  const hintWeight = tryWeight(d, session, ex);
-  const weightedPullups =
-    ex.kind === 'pullup' &&
-    (pullupGoal(d, ex, session.id).weight > 0 || setsOf(session, ex).some((s) => s.weight > 0) || historyFor(d, ex.key, session.id).some((x) => x.sets.some((s) => s.weight > 0)));
+  const stopEditing = () => {
+    if (editIdx != null) for (const f of flats) drafts.delete(draftKey(sid, f, editIdx));
+    editing = null;
+  };
 
-  // ---- Rows ----
+  // ---- Drafts and editors ----
 
-  const draftFor = (i) => {
-    const k = draftKey(sid, ex, i);
-    if (!drafts.has(k)) drafts.set(k, logged.has(i) ? setValues(ex, logged.get(i)) : prefill(d, session, ex, i));
+  const draftFor = (fx, i, existing) => {
+    const k = draftKey(sid, fx, i);
+    if (!drafts.has(k)) drafts.set(k, existing ? setValues(fx, existing) : prefill(d, session, fx, i));
     return drafts.get(k);
   };
 
-  const steppers = (draft, onWeightChange) =>
-    h(
+  const weightedPullups = (fx) =>
+    fx.kind === 'pullup' &&
+    (pullupGoal(d, fx, session.id).weight > 0 ||
+      historyFor(d, fx.key, session.id).some((x) => x.sets.some((s) => s.weight > 0)) ||
+      session.sets.some((s) => s.exerciseKey === fx.key && s.weight > 0));
+
+  const steppers = (fx, draft, onWeightChange) => {
+    const wp = weightedPullups(fx);
+    return h(
       'div',
-      { class: 'fields' + (weightedPullups ? ' wrap' : '') },
-      fieldsFor(ex, weightedPullups).map((f) =>
+      { class: 'fields' + (wp ? ' wrap' : '') },
+      fieldsFor(fx, wp).map((f) =>
         stepper({
           label: f.label,
           value: draft[f.prop],
@@ -105,106 +130,211 @@ export function exercise({ sid, exId }) {
         }),
       ),
     );
+  };
 
-  const activeRow = (i) => {
-    const draft = draftFor(i);
-    const hint = hintWeight
-      ? h(
-          'button',
-          {
-            class: 'hint',
-            type: 'button',
-            onclick: () => {
-              draft.weight = hintWeight;
-              draft.reps = ex.repMin;
-              notify();
-            },
-          },
-          `Try ${hintWeight}`,
-        )
-      : null;
-    const toggleHint = () => {
-      if (hint) hint.hidden = !(draft.weight < hintWeight);
-    };
-    toggleHint();
-    return h(
-      'div',
-      { class: 'set-editor' },
+  // Up to three lighter entries after the main one. They are stored and shown, never counted for progress.
+  const dropsBlock = (fx, draft) => {
+    if (!fx.dropset) return null;
+    const drops = draft.drops || (draft.drops = []);
+    const rows = drops.map((dr, i) =>
       h(
         'div',
-        { class: 'head' },
-        h('div', { class: 'left' }, h('span', { class: 'amber medium' }, `Set ${i}`), hint),
-        h('span', { class: 'ring' }),
+        { class: 'drop' },
+        h(
+          'div',
+          { class: 'drop-head' },
+          h('span', { class: 'label' }, `Drop ${i + 1}`),
+          h('button', { class: 'drop-x', type: 'button', 'aria-label': `Remove drop ${i + 1}`, onclick: () => (drops.splice(i, 1), notify()) }, icon('x')),
+        ),
+        h(
+          'div',
+          { class: 'fields' },
+          stepper({ label: 'kg', value: dr.weight, step: fx.step || 1, decimal: true, onChange: (v) => (dr.weight = v) }),
+          stepper({ label: 'Reps', value: dr.reps, onChange: (v) => (dr.reps = v) }),
+        ),
       ),
-      steppers(draft, toggleHint),
     );
+    const add =
+      drops.length < 3
+        ? h(
+            'button',
+            {
+              class: 'drop-add',
+              type: 'button',
+              onclick: () => {
+                const prev = drops.length ? drops[drops.length - 1] : draft;
+                drops.push({ weight: dropWeight(fx, prev.weight), reps: prev.reps });
+                notify();
+              },
+            },
+            icon('plus'),
+            'Drop',
+          )
+        : null;
+    return h('div', { class: 'drops' }, rows, add);
+  };
+
+  const hintFor = (fx, draft) => {
+    const w = tryWeight(d, session, fx);
+    if (!w) return null;
+    const btn = h(
+      'button',
+      {
+        class: 'hint',
+        type: 'button',
+        onclick: () => {
+          draft.weight = w;
+          draft.reps = fx.repMin;
+          notify();
+        },
+      },
+      fx.bodyweight ? `Try +${w}` : `Try ${w}`,
+    );
+    btn.hidden = !(draft.weight < w);
+    return { btn, w };
+  };
+
+  // One part of an editor: header (title, hint), steppers, drops.
+  const block = (fx, draft, { title }) => {
+    const hint = hintFor(fx, draft);
+    const body = steppers(fx, draft, () => {
+      if (hint) hint.btn.hidden = !(draft.weight < hint.w);
+    });
+    return h(
+      'div',
+      { class: 'part' },
+      title || hint ? h('div', { class: 'block-head' }, title ? h('span', { class: 'label' }, title) : null, hint ? hint.btn : null) : null,
+      body,
+      dropsBlock(fx, draft),
+    );
+  };
+
+  const editorShell = (i, head, children, extra) =>
+    h('div', { class: 'set-editor' }, head, ...children, extra || null);
+
+  const activeHead = (i, hint) =>
+    h('div', { class: 'head' }, h('div', { class: 'left' }, h('span', { class: 'amber medium' }, isSuper ? `Round ${i}` : `Set ${i}`), hint || null), h('span', { class: 'ring' }));
+
+  const activeRow = (i) => {
+    if (!isSuper) {
+      const draft = draftFor(ex, i);
+      const hint = hintFor(ex, draft);
+      const body = steppers(ex, draft, () => {
+        if (hint) hint.btn.hidden = !(draft.weight < hint.w);
+      });
+      return editorShell(i, activeHead(i, hint && hint.btn), [body, dropsBlock(ex, draft)]);
+    }
+    const entry = byIdx.get(i) || {};
+    const part = (fx, label, done) =>
+      done
+        ? h('div', { class: 'part-done' }, h('span', { class: 'label' }, `${label} · ${fx.name}`), h('span', { class: 'end' }, h('span', { class: 'muted' }, setSummary(fx, done)), checkCircle()))
+        : block(fx, draftFor(fx, i), { title: `${label} · ${fx.name}` });
+    return editorShell(i, activeHead(i), [part(partA, 'A', entry.A), part(partB, 'B', entry.B)]);
   };
 
   const editRow = (i) => {
-    const draft = draftFor(i);
-    return h(
-      'div',
-      { class: 'set-editor' },
-      h(
-        'button',
-        {
-          class: 'head',
-          type: 'button',
-          'aria-label': `Close set ${i}`,
-          onclick: () => {
-            stopEditing();
-            notify();
-          },
+    const entry = byIdx.get(i);
+    const head = h(
+      'button',
+      {
+        class: 'head',
+        type: 'button',
+        'aria-label': `Close ${isSuper ? 'round' : 'set'} ${i}`,
+        onclick: () => {
+          stopEditing();
+          notify();
         },
-        h('span', { class: 'amber medium' }, `Set ${i}`),
-        checkCircle(),
-      ),
-      steppers(draft),
-      h(
-        'button',
-        {
-          class: 'del',
-          type: 'button',
-          onclick: () => {
-            stopEditing();
-            drafts.clear();
-            deleteSet(sid, ex, i);
-          },
+      },
+      h('span', { class: 'amber medium' }, isSuper ? `Round ${i}` : `Set ${i}`),
+      checkCircle(),
+    );
+    const del = h(
+      'button',
+      {
+        class: 'del',
+        type: 'button',
+        onclick: () => {
+          stopEditing();
+          drafts.clear();
+          deleteSet(sid, card, i);
         },
-        'Delete set',
-      ),
+      },
+      isSuper ? 'Delete round' : 'Delete set',
+    );
+    if (!isSuper) {
+      const fx = resolve(card, entry.x.exerciseKey);
+      return editorShell(i, head, [block(fx, draftFor(fx, i, entry.x), {})], del);
+    }
+    return editorShell(
+      i,
+      head,
+      [
+        block(partA, draftFor(partA, i, entry.A), { title: `A · ${partA.name}` }),
+        block(partB, draftFor(partB, i, entry.B), { title: `B · ${partB.name}` }),
+      ],
+      del,
     );
   };
 
+  // ---- Rows ----
+
+  const hist = isSuper ? hasHistory(d, session, partA) || hasHistory(d, session, partB) : hasHistory(d, session, ex);
+
+  const summaryOf = (i) => {
+    const entry = byIdx.get(i);
+    if (isSuper) {
+      return h(
+        'span',
+        { class: 'stack-end' },
+        h('span', { class: 'muted' }, `A  ${entry.A ? setSummary(partA, entry.A) : '-'}`),
+        h('span', { class: 'muted' }, `B  ${entry.B ? setSummary(partB, entry.B) : '-'}`),
+      );
+    }
+    const fx = resolve(card, entry.x.exerciseKey);
+    const other = card.variants && fx.key !== ex.key ? `${fx.variantLabel}: ` : '';
+    return h('span', { class: 'muted' }, other + setSummary(fx, entry.x));
+  };
+
+  const previewOf = (i) => {
+    if (!hist) return '-';
+    if (isSuper) {
+      return h(
+        'span',
+        { class: 'stack-end' },
+        h('span', {}, `A  ${hasHistory(d, session, partA) ? setSummary(partA, prefill(d, session, partA, i)) : '-'}`),
+        h('span', {}, `B  ${hasHistory(d, session, partB) ? setSummary(partB, prefill(d, session, partB, i)) : '-'}`),
+      );
+    }
+    return setSummary(ex, prefill(d, session, ex, i));
+  };
+
+  const label = isSuper ? 'Round' : 'Set';
   const rows = [];
-  for (let i = 1; i <= ex.sets; i++) {
-    if (logged.has(i) && editIdx === i) {
+  for (let i = 1; i <= card.sets; i++) {
+    if (roundDone(i) && editIdx === i) {
       rows.push(editRow(i));
-    } else if (logged.has(i)) {
+    } else if (roundDone(i)) {
       rows.push(
         h(
           'button',
           {
             class: 'row',
             type: 'button',
-            'aria-label': `Edit set ${i}`,
+            'aria-label': `Edit ${label.toLowerCase()} ${i}`,
             onclick: () => {
               stopEditing();
               editing = { key: editKey, idx: i };
               notify();
             },
           },
-          h('span', { class: 'name' }, `Set ${i}`),
-          h('span', { class: 'end' }, h('span', { class: 'muted' }, setSummary(ex, logged.get(i))), checkCircle()),
+          h('span', { class: 'name' }, `${label} ${i}`),
+          h('span', { class: 'end' }, summaryOf(i), checkCircle()),
         ),
       );
     } else if (i === activeIdx && editIdx == null) {
       rows.push(activeRow(i));
     } else {
-      const preview = historyExists ? setSummary(ex, prefill(d, session, ex, i)) : '-';
-      rows.push(
-        h('div', { class: 'row dim' }, h('span', { class: 'name' }, `Set ${i}`), h('span', { class: 'end' }, preview)),
-      );
+      rows.push(h('div', { class: 'row dim' }, h('span', { class: 'name' }, `${label} ${i}`), h('span', { class: 'end' }, previewOf(i))));
     }
   }
 
@@ -212,7 +342,13 @@ export function exercise({ sid, exId }) {
 
   const currentRest = rest.active();
   const resting =
-    currentRest && currentRest.sessionId === sid && currentRest.exerciseId === exId && editIdx == null && activeIdx != null;
+    currentRest && currentRest.sessionId === sid && currentRest.exerciseId === card.id && editIdx == null && activeIdx != null;
+
+  const complete = (fx, i, part, startRest) => {
+    const values = copy(draftFor(fx, i));
+    drafts.delete(draftKey(sid, fx, i));
+    logSet(sid, fx, i, values, { startRest, part });
+  };
 
   let bottom;
   let cleanup;
@@ -223,10 +359,14 @@ export function exercise({ sid, exId }) {
         class: 'btn-primary',
         type: 'button',
         onclick: () => {
-          const values = { ...draftFor(editIdx) };
-          drafts.delete(draftKey(sid, ex, editIdx));
+          const entry = byIdx.get(editIdx);
+          const targets = isSuper ? [partA, partB] : [resolve(card, entry.x.exerciseKey)];
+          for (const fx of targets) {
+            const values = copy(draftFor(fx, editIdx, entry[isSuper ? fx.part : 'x']));
+            drafts.delete(draftKey(sid, fx, editIdx));
+            updateSet(sid, fx, editIdx, values);
+          }
           editing = null;
-          updateSet(sid, ex, editIdx, values);
         },
       },
       'Save',
@@ -236,22 +376,39 @@ export function exercise({ sid, exId }) {
     bottom = rb.el;
     cleanup = rb.stop;
   } else if (activeIdx != null) {
+    const text = isSuper ? `Complete set ${activeEntry.A ? 'B' : 'A'}` : `Complete set ${activeIdx}`;
     bottom = h(
       'button',
       {
         class: 'btn-primary',
         type: 'button',
         onclick: () => {
-          const values = { ...draftFor(activeIdx) };
-          drafts.delete(draftKey(sid, ex, activeIdx));
-          logSet(sid, ex, activeIdx, values, { startRest: activeIdx < ex.sets });
+          if (!isSuper) complete(ex, activeIdx, undefined, activeIdx < card.sets);
+          else if (!activeEntry.A) complete(partA, activeIdx, 'A', false);
+          else complete(partB, activeIdx, 'B', activeIdx < card.sets);
         },
       },
-      `Complete set ${activeIdx}`,
+      text,
     );
   } else {
     bottom = h('button', { class: 'btn-primary', type: 'button', onclick: () => back(`/session/${sid}`) }, 'Done');
   }
+
+  // ---- Header ----
+
+  const best = isSuper ? 0 : bestFor(d, ex);
+  const variantSwitch =
+    !isSuper && card.variants && card.variants.length > 1
+      ? segmented({
+          label: 'Variant',
+          options: card.variants.map((v) => ({ value: v.key, label: v.label })),
+          value: ex.key,
+          onChange: (key) => {
+            stopEditing();
+            setVariant(sid, card, key);
+          },
+        })
+      : null;
 
   const el = h(
     'main',
@@ -265,14 +422,10 @@ export function exercise({ sid, exId }) {
       }),
       h('span', { class: 'muted sec' }, `${position} of ${session.exercises.length}`),
     ),
-    h(
-      'div',
-      { class: 'title-row' },
-      h('h1', { class: 'title' }, ex.name),
-      best > 0 ? h('span', { class: 'pill' }, `Best ${bestShort(ex, best)}`) : null,
-    ),
-    ex.note ? h('p', { class: 'note' }, ex.note) : null,
-    mediaBox(ex),
+    h('div', { class: 'title-row' }, h('h1', { class: 'title' }, card.name), best > 0 ? h('span', { class: 'pill' }, `Best ${bestShort(ex, best)}`) : null),
+    variantSwitch,
+    (isSuper ? card.note : ex.note) ? h('p', { class: 'note' }, isSuper ? card.note : ex.note) : null,
+    mediaBox(activePart),
     h('section', { class: 'glass list' }, rows),
     h('div', { class: 'bottom' }, bottom),
   );
