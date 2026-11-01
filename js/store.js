@@ -12,7 +12,7 @@
 import { defaultPlan, DEFAULT_REST } from './plan.js';
 
 const KEY = 'setlog.data';
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 // MIGRATIONS[n] upgrades a version n document to version n + 1. A step must never throw on odd data.
 const MIGRATIONS = {
@@ -95,18 +95,30 @@ const MIGRATIONS = {
     return swapCards(d, (card) => Array.isArray(card.variants) && card.variants.some((v) => v && v.key === 'skullcrusher-cable'), 'skullcrusher-free');
   },
 
-  // Version 5 -> 6: the rowing machine leaves the program. Its history stays, archived in Progress.
+  // Version 5 -> 6: nothing to do (the rowing machine was removed here for a short time, then kept; see 6 -> 7).
   5(d) {
-    return removeCards(d, (card) => card.key === 'rowing-machine-wide' || (Array.isArray(card.variants) && card.variants.some((v) => v && v.key === 'rowing-machine-wide')));
+    return d;
+  },
+
+  // Version 6 -> 7: the rowing machine is back as the third Pull day exercise, unless the plan already has it.
+  6(d) {
+    return addCard(d, 'pull', 'rowing-machine-wide', 2);
   },
 };
 
-// Removes cards of the stored plan that match `isOld`. Logged sets are never touched.
-function removeCards(d, isOld) {
+// Adds the default card for `key` to a stored plan session at `index`, unless a card with that key is there.
+function addCard(d, sessionId, key, index) {
   if (!d.plan || !Array.isArray(d.plan.sessions)) return d;
-  for (const ps of d.plan.sessions) {
-    if (ps && Array.isArray(ps.exercises)) ps.exercises = ps.exercises.filter((card) => !(card && typeof card === 'object' && isOld(card)));
-  }
+  const ps = d.plan.sessions.find((x) => x && x.id === sessionId);
+  const fresh = defaultPlan()
+    .sessions.flatMap((x) => x.exercises)
+    .find((e) => e.key === key);
+  if (!ps || !Array.isArray(ps.exercises) || !fresh) return d;
+  const has = ps.exercises.some((c) => c && (c.key === key || (Array.isArray(c.variants) && c.variants.some((v) => v && v.key === key))));
+  if (has) return d;
+  const next = structuredClone(fresh);
+  next.id = `${ps.id}.${fresh.slug}`;
+  ps.exercises.splice(Math.min(index, ps.exercises.length), 0, next);
   return d;
 }
 

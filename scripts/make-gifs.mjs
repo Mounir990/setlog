@@ -46,6 +46,7 @@ const MUSCLES = {
   'triceps-pushdown-one-hand': { primary: ['arm'] },
   'pull-ups-wide': { primary: ['lats'], secondary: ['arm'] },
   'pull-ups-narrow': { primary: ['lats', 'arm'] },
+  'rowing-machine-wide': { primary: ['lats'], secondary: ['delt', 'arm'] },
   'cable-rear-delt-fly': { primary: ['delt'], secondary: ['lats'] },
   'back-extension': { primary: ['lowback', 'glute'], secondary: ['ham'] },
   'incline-biceps-curl': { primary: ['arm'] },

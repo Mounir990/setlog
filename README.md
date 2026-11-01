@@ -53,7 +53,7 @@ Or do it by hand: put `<slug>.gif` (or `.webp`, `.mp4`) in `media/exercises/`, l
 
 Without a listed file an exercise falls back to the built-in stick figure (`js/stickfigures.js`), and custom exercises show a plain placeholder.
 
-Slugs: `incline-machine-press`, `cable-lateral-raise`, `bench-press-free`, `bench-press-guided`, `shoulder-press-machine`, `dips`, `skullcrusher-free`, `triceps-pushdown-one-hand`, `pull-ups-wide`, `cable-rear-delt-fly`, `pull-ups-narrow`, `back-extension`, `incline-biceps-curl`, `hammer-curl`, `standing-calf-raise`, `hex-squat`, `lying-leg-curl`, `leg-extension`.
+Slugs: `incline-machine-press`, `cable-lateral-raise`, `bench-press-free`, `bench-press-guided`, `shoulder-press-machine`, `dips`, `skullcrusher-free`, `triceps-pushdown-one-hand`, `pull-ups-wide`, `cable-rear-delt-fly`, `rowing-machine-wide`, `pull-ups-narrow`, `back-extension`, `incline-biceps-curl`, `hammer-curl`, `standing-calf-raise`, `hex-squat`, `lying-leg-curl`, `leg-extension`.
 
 ## Program model
 

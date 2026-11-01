@@ -33,6 +33,7 @@ const MATCH = {
   'extension-lombaire': 'back-extension',
   'curl-haltere-prise-neutre': 'hammer-curl',
   'oiseau-a-la-poulie': 'cable-rear-delt-fly',
+  'rowing-t-bar': 'rowing-machine-wide',
   'barre-front': 'skullcrusher-free',
   'traction-prise-large': 'pull-ups-wide',
   'developpe-couche-avec-chaines': 'bench-press-free',
