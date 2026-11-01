@@ -2,7 +2,7 @@
 // Strategy: network first (short timeout) so a new deploy shows up on the next open,
 // falling back to the cache when offline or slow. Bump CACHE when the file list changes.
 
-const CACHE = 'setlog-v9';
+const CACHE = 'setlog-v10';
 
 const ASSETS = [
   './',

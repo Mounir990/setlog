@@ -40,7 +40,7 @@ All app files, the font and the icons are cached on first load, so the app works
 
 ## Exercise animations
 
-Every exercise screen shows a looping animation; tapping it pauses it. Most are your own GIFs, shrunk to phone size by `scripts/convert-gifs.mjs` (cropped to the figure, 560 x 320, about 150 KB each) and cached for offline use. Every exercise of the program has a real animation. `scripts/make-gifs.mjs` can still draw a grey mannequin stand-in for a new exercise that has none. The dips GIF shows the assisted version and the rowing GIF a T-bar row, the closest ones available.
+Every exercise screen shows a looping animation; tapping it pauses it. Most are your own GIFs, shrunk to phone size by `scripts/convert-gifs.mjs` (cropped to the figure, 560 x 320, about 150 KB each) and cached for offline use. Two exercises have no real animation yet and show a grey mannequin stand-in drawn by `scripts/make-gifs.mjs`: `dips` and `rowing-machine-wide` (the only GIFs on hand were assisted dips and a T-bar row, which are different exercises). Drop a real GIF with the same slug through `convert-gifs.mjs` (add a MATCH entry for its file name) to replace a stand-in.
 
 To add or replace an animation:
 
