@@ -49,7 +49,7 @@ export function bestLong(ex, v) {
 }
 
 export function targetLabel(ex) {
-  if (ex.max) return `${ex.sets} x max`;
+  if (ex.max) return `${ex.sets} x to failure`;
   if (ex.repMin === ex.repMax) return `${ex.sets} x ${ex.repMin}`;
   return `${ex.sets} x ${ex.repMin}-${ex.repMax}`;
 }
@@ -105,8 +105,33 @@ export function sessionSummary(ex, sets) {
   }
 }
 
-export function goalLabel(g) {
-  return `${g.sets} x ${g.reps}` + (g.weight > 0 ? ` at +${num(g.weight)} kg` : '');
+// "60 kg x 8, 8" for the "Last time" line: what was typed in the last session, set by set.
+export function lastTimeLine(ex, sets) {
+  const w = (s) => num(s.weight || 0);
+  switch (ex.kind) {
+    case 'pullup':
+    case 'easy': {
+      const clean = sets.map((s) => s.cleanReps || 0).join(', ');
+      const part = sets.reduce((n, s) => n + (s.partialReps || 0), 0);
+      const kg = Math.max(0, ...sets.map((s) => s.weight || 0));
+      return `${clean} clean` + (part ? `, ${part} part.` : '') + (kg ? ` at +${num(kg)} kg` : '');
+    }
+    case 'weighted': {
+      const drops = sets.reduce((n, s) => n + (s.drops ? s.drops.length : 0), 0);
+      const tail = drops ? ` (+${drops} ${drops === 1 ? 'drop' : 'drops'})` : '';
+      const reps = sets.map((s) => s.reps || 0).join(', ');
+      const weights = sets.map(w);
+      if (weights.every((x) => x === weights[0])) {
+        if (ex.bodyweight) return (weights[0] === '0' ? `${reps} reps` : `+${weights[0]} kg x ${reps}`) + tail;
+        return `${weights[0]} kg x ${reps}` + tail;
+      }
+      return sets.map((s) => `${w(s)} x ${s.reps || 0}`).join(', ') + ' kg' + tail;
+    }
+    case 'time':
+      return `${sets.map((s) => s.seconds || 0).join(', ')} s`;
+    default:
+      return `${sets.map((s) => s.reps || 0).join(', ')} reps`;
+  }
 }
 
 export function ago(ts) {

@@ -1,3 +1,25 @@
 {
-  "files": []
+  "files": [
+    "incline-machine-press.gif",
+    "cable-lateral-raise.gif",
+    "bench-press-free.gif",
+    "bench-press-guided.gif",
+    "shoulder-press-machine.gif",
+    "dips.gif",
+    "skullcrusher-cable.gif",
+    "skullcrusher-free.gif",
+    "triceps-pushdown-one-hand.gif",
+    "pull-ups-wide.gif",
+    "pull-ups-narrow.gif",
+    "cable-rear-delt-fly.gif",
+    "rowing-machine-wide.gif",
+    "back-extension.gif",
+    "incline-biceps-curl.gif",
+    "hammer-curl.gif",
+    "standing-calf-raise.gif",
+    "seated-calf-raise.gif",
+    "hex-squat.gif",
+    "lying-leg-curl.gif",
+    "leg-extension.gif"
+  ]
 }

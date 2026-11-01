@@ -2,21 +2,19 @@
 //
 // A plan session holds "cards". A card is one entry of the session overview:
 //   - a plain exercise (one key),
-//   - an exercise with variants (Free / Guided, Lat pulldown / Pull-ups ...): each variant has its own key,
-//     so history, bests and "Try X" are never mixed,
+//   - an exercise with variants (Free / Guided ...): each variant has its own key, so history,
+//     bests and the "Last time" line are never mixed,
 //   - a superset: two parts, A and B, each with its own key. `sets` is then the number of rounds.
 //
 // Fields (on the card, and on a variant or part where they differ):
-//   kind         pullup (strict) | easy | weighted | reps | time
+//   kind         pullup (clean + partial reps, optional added kg) | easy | weighted | reps | time
 //   sets         planned sets (rounds for a superset)
-//   repMin/Max   rep range; equal values mean a fixed target. For pull-ups repMin is the starting clean-rep goal.
-//   max          true for "max" targets: no range, no auto goal
+//   repMin/Max   target rep range, shown as a reference only; it drives no logic
+//   max          true for "to failure" targets: no range
 //   restSec      rest after a set (after the pair for a superset)
-//   step         weight step in kg
-//   progression  strict (pull-up ladder) | double (rep range) | fixed (fixed reps) | none
 //   trackBest    whether the exercise has a Best pill and PRs
 //   dropset      a set may carry up to 3 lighter "drop" entries (weighted only)
-//   bodyweight   weight is optional added kg, 0 by default (dips)
+//   bodyweight   weight is optional added kg, 0 by default (dips, back extension)
 
 const base = (o) => ({
   kind: 'weighted',
@@ -25,28 +23,20 @@ const base = (o) => ({
   repMax: 12,
   max: false,
   restSec: 90,
-  step: 2.5,
-  progression: 'double',
   trackBest: true,
   note: '',
   ...o,
 });
 
-const withProgression = (o) => {
-  const c = base(o);
-  if (!o.progression) c.progression = c.repMin === c.repMax ? 'fixed' : 'double';
-  return c;
-};
-
 // Plain exercise.
-const plain = (slug, name, o = {}) => ({ slug, key: slug, name, ...withProgression(o) });
+const plain = (slug, name, o = {}) => ({ slug, key: slug, name, ...base(o) });
 
 // Exercise with variants. Each variant: { key, label, ...overrides }.
 const withVariants = (group, name, variants, o = {}) => ({
   group,
   name,
   variants: variants.map((v) => ({ slug: v.key, ...v })),
-  ...withProgression(o),
+  ...base(o),
 });
 
 // Superset: parts are { key, name, ...overrides }.
@@ -55,17 +45,11 @@ const superset = (group, name, parts, o = {}) => ({
   name,
   superset: true,
   parts: parts.map((p) => ({ slug: p.key, ...p })),
-  ...withProgression(o),
+  ...base(o),
 });
 
-const pullups = (key, label) => ({
-  key,
-  label,
-  kind: 'pullup',
-  repMin: 4,
-  repMax: 4,
-  progression: 'strict',
-});
+// Pull-ups: clean and partial reps, optional added kg, always to failure. Only clean reps count for records.
+const pullups = (slug, name) => plain(slug, name, { kind: 'pullup', repMin: 0, repMax: 0, max: true, restSec: 90, note: 'Only clean reps count for records' });
 
 const TEMPLATES = {
   push: {
@@ -73,7 +57,7 @@ const TEMPLATES = {
     kind: 'full',
     exercises: [
       plain('incline-machine-press', 'Incline machine press', { repMin: 8, repMax: 12, restSec: 120, note: 'Upper chest' }),
-      plain('cable-lateral-raise', 'Cable lateral raise', { repMin: 10, repMax: 15, restSec: 60, step: 1, dropset: true }),
+      plain('cable-lateral-raise', 'Cable lateral raise', { repMin: 10, repMax: 15, restSec: 60, dropset: true }),
       withVariants(
         'bench-press',
         'Bench press',
@@ -84,7 +68,7 @@ const TEMPLATES = {
         { repMin: 6, repMax: 10, restSec: 150 },
       ),
       plain('shoulder-press-machine', 'Shoulder press machine', { repMin: 8, repMax: 12, restSec: 120 }),
-      plain('dips', 'Dips', { repMin: 8, repMax: 12, restSec: 120, bodyweight: true, note: 'Bodyweight, add kg when ready' }),
+      plain('dips', 'Dips', { repMin: 8, repMax: 12, restSec: 120, bodyweight: true, note: 'Bodyweight, optional added kg' }),
       withVariants(
         'skullcrusher',
         'Skullcrusher',
@@ -94,46 +78,20 @@ const TEMPLATES = {
         ],
         { repMin: 10, repMax: 12, restSec: 90 },
       ),
-      plain('triceps-pushdown-one-hand', 'Triceps pushdown, one hand', { repMin: 10, repMax: 15, restSec: 60, step: 1, note: 'per arm' }),
+      plain('triceps-pushdown-one-hand', 'Triceps pushdown, one hand', { repMin: 10, repMax: 15, restSec: 60, note: 'per arm' }),
     ],
   },
   pull: {
     name: 'Pull day',
     kind: 'full',
     exercises: [
-      withVariants(
-        'wide-grip',
-        'Wide grip',
-        [{ key: 'lat-pulldown-wide', label: 'Lat pulldown' }, pullups('pull-ups-wide', 'Pull-ups')],
-        { repMin: 8, repMax: 12, restSec: 120 },
-      ),
-      plain('cable-rear-delt-fly', 'Cable rear delt fly', { repMin: 12, repMax: 15, restSec: 60, step: 1 }),
-      withVariants(
-        'row-wide',
-        'Row, wide grip',
-        [
-          { key: 't-bar-row', label: 'T-bar' },
-          { key: 'rowing-machine-wide', label: 'Machine' },
-        ],
-        { repMin: 8, repMax: 12, restSec: 120 },
-      ),
-      withVariants(
-        'narrow-grip',
-        'Narrow grip',
-        [{ key: 'lat-pulldown-narrow', label: 'Lat pulldown' }, pullups('pull-ups-narrow', 'Pull-ups')],
-        { repMin: 8, repMax: 12, restSec: 120 },
-      ),
-      withVariants(
-        'back-extension',
-        'Lower back extension',
-        [
-          { key: 'back-extension-free', label: 'Free', bodyweight: true },
-          { key: 'back-extension-machine', label: 'Machine' },
-        ],
-        { repMin: 10, repMax: 15, restSec: 90 },
-      ),
-      plain('incline-biceps-curl', 'Seated incline biceps curl', { repMin: 10, repMax: 12, restSec: 75, step: 1 }),
-      plain('hammer-curl', 'Hammer curl', { repMin: 8, repMax: 12, restSec: 75, step: 1 }),
+      pullups('pull-ups-wide', 'Pull-ups, wide grip'),
+      plain('cable-rear-delt-fly', 'Cable rear delt fly', { repMin: 12, repMax: 15, restSec: 60 }),
+      plain('rowing-machine-wide', 'Rowing machine, wide grip', { repMin: 8, repMax: 12, restSec: 120 }),
+      pullups('pull-ups-narrow', 'Pull-ups, narrow grip'),
+      plain('back-extension', 'Lower back extension', { repMin: 10, repMax: 15, restSec: 90, bodyweight: true, note: 'Bodyweight, optional added kg' }),
+      plain('incline-biceps-curl', 'Seated incline biceps curl', { repMin: 10, repMax: 12, restSec: 75 }),
+      plain('hammer-curl', 'Hammer curl', { repMin: 8, repMax: 12, restSec: 75 }),
     ],
   },
   leg: {
@@ -149,7 +107,7 @@ const TEMPLATES = {
         ],
         { repMin: 12, repMax: 15, restSec: 60, note: 'Superset: A, then B, then rest' },
       ),
-      plain('hex-squat', 'Hex squat', { repMin: 6, repMax: 10, restSec: 150, note: 'Hex bar' }),
+      plain('hex-squat', 'Hex squat', { repMin: 6, repMax: 10, restSec: 150, note: 'Hex (trap) bar' }),
       plain('lying-leg-curl', 'Lying leg curl', { repMin: 8, repMax: 12, restSec: 90 }),
       plain('leg-extension', 'Leg extension', { repMin: 10, repMax: 15, restSec: 90 }),
     ],

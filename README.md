@@ -2,7 +2,9 @@
 
 A personal workout tracker for one user. It guides each training session, logs every set and shows progress per exercise. Vanilla HTML, CSS and JavaScript (ES modules), no framework, no build step, no backend, no accounts. Installable as a PWA and fully offline.
 
-Status: complete. The program is Push day, Pull day, Leg day (a rotation that ignores weekdays), with variants (Free / Guided, Lat pulldown / Pull-ups ...), a dropset exercise, a calf-raise superset, one-hand and bodyweight lifts. Old exercises stay in Progress as read-only archived entries.
+Status: complete. The program is Push day, Pull day, Leg day (a rotation that ignores weekdays), with variants (Free / Guided, Cable / Free), a dropset exercise, a calf-raise superset, pull-ups, one-hand and bodyweight lifts. Old exercises stay in Progress as read-only archived entries.
+
+The app never suggests a weight or a number of reps. You type what you lifted; Setlog records it and starts the next set from your last session's values, with a "Last time" line to compare.
 
 ## Run locally
 
@@ -38,21 +40,25 @@ All app files, the font and the icons are cached on first load, so the app works
 
 ## Exercise animations
 
-Every exercise screen shows a looping stick-figure animation (white lines on glass); tapping it pauses it. The figures are drawn in code from two poses per exercise (`js/stickfigures.js`), so there is nothing to download and they work offline.
+Every exercise screen shows a looping animation: a grey mannequin with the muscles worked in amber. Tapping it pauses it. The 21 GIFs in `media/exercises/` are drawn by `scripts/make-gifs.mjs` from the same two poses per exercise as the built-in stick figures (`js/stickfigures.js`), so they are our own artwork and are cached for offline use. An exercise without a listed file falls back to the stick figure, and custom exercises show a plain placeholder.
 
-To use your own animation for an exercise:
+To redraw the GIFs after changing a pose or the style:
+
+```bash
+cd scripts && npm install && node make-gifs.mjs
+```
+
+To use your own animation for an exercise instead:
 
 1. Put `<slug>.gif` (or `.webp`, `.mp4`) in `media/exercises/`.
 2. List the file name in `media/exercises/index.json`, for example `{ "files": ["pull-ups-wide.gif"] }`.
 3. For offline use, add its path to `ASSETS` in `sw.js` and bump `CACHE`.
 
-Custom exercises you add in the app show a plain placeholder.
-
-Slugs: `incline-machine-press`, `cable-lateral-raise`, `bench-press-free`, `bench-press-guided`, `shoulder-press-machine`, `dips`, `skullcrusher-cable`, `skullcrusher-free`, `triceps-pushdown-one-hand`, `lat-pulldown-wide`, `pull-ups-wide`, `cable-rear-delt-fly`, `t-bar-row`, `rowing-machine-wide`, `lat-pulldown-narrow`, `pull-ups-narrow`, `back-extension-free`, `back-extension-machine`, `incline-biceps-curl`, `hammer-curl`, `standing-calf-raise`, `seated-calf-raise`, `hex-squat`, `lying-leg-curl`, `leg-extension`.
+Slugs: `incline-machine-press`, `cable-lateral-raise`, `bench-press-free`, `bench-press-guided`, `shoulder-press-machine`, `dips`, `skullcrusher-cable`, `skullcrusher-free`, `triceps-pushdown-one-hand`, `pull-ups-wide`, `cable-rear-delt-fly`, `rowing-machine-wide`, `pull-ups-narrow`, `back-extension`, `incline-biceps-curl`, `hammer-curl`, `standing-calf-raise`, `seated-calf-raise`, `hex-squat`, `lying-leg-curl`, `leg-extension`.
 
 ## Program model
 
-A plan session holds cards (`js/plan.js`). A card is a plain exercise, an exercise with variants (each variant has its own key, so history, bests and "Try X" are never mixed) or a superset (two parts, A and B, each with its own history; `sets` counts rounds). A set can carry up to three drop entries (about 20% lighter each) that are stored and shown but never count toward progression or bests. Progression is double progression with the 10-day gap rule; the strict pull-up ladder (2 x 4, 2 x 5, 2 x 6, then +2.5 kg at 2 x 4) applies to the pull-ups variants.
+A plan session holds cards (`js/plan.js`). A card is a plain exercise, an exercise with variants (each variant has its own key, so history, bests and the "Last time" line are never mixed) or a superset (two parts, A and B, each with its own history; `sets` counts rounds). Target reps and rest are shown as a reference and are editable in Plan; they drive no logic. A set can carry up to three drop entries that you type yourself (they start from your last drops, or from the main weight); they are stored and shown but never count toward bests. Pull-ups log clean reps, partial reps and optional added kg; only clean reps count for records. The +/- buttons move weights by 2.5 kg and reps by 1; tap a number to type any value.
 
 ## Structure
 
@@ -62,7 +68,7 @@ css/                  tokens.css (all sizes and colors), base.css (glass, button
 js/main.js            boot, routes, tab bar
 js/store.js           versioned JSON in localStorage, migrations
 js/plan.js            default plan (editable data)
-js/progression.js     prefill, hints, bests, rotation, weekly count (all derived from logged sets)
+js/progression.js     prefill, bests, rotation, weekly count (all derived from logged sets)
 js/rest.js            rest timer based on an end timestamp
 js/router.js          hash routes on the History API
 js/media.js, js/stickfigures.js   exercise animation box and built-in fallbacks
@@ -70,11 +76,12 @@ js/chart.js           line chart and sparkline
 js/screens/           one file per screen (today, overview, exercise, done, progress, plan)
 sw.js, manifest.webmanifest, icons/
 scripts/make-icons.mjs  regenerates the app icons (not part of the app)
+scripts/make-gifs.mjs   renders the exercise GIFs (developer tool, needs npm install in scripts/)
 ```
 
 ## Data
 
-Everything is stored on the device in `localStorage` under `setlog.data` (schema version 2). Version 1 data (the old Upper back / Upper front / Legs program) is upgraded on first open: history is kept, bench press, lat pulldown, leg curl, calf raises and pull-ups continue under their new keys, the other old exercises are archived, and the previous plan is kept in `archive` inside the data. Clearing browser data erases history, so use Plan, then Back up data, to export a JSON file now and then. Import restores it.
+Everything is stored on the device in `localStorage` under `setlog.data` (schema version 3). Older data is upgraded on first open: every logged set is kept, exercises that are the same movement continue under their new key (bench press, leg curl, calf raises, pull-ups, back extension), the other old exercises appear in Progress as archived, the program is replaced by the current one, and the previous plan is kept in `archive` inside the data. Clearing browser data erases history, so use Plan, then Back up data, to export a JSON file now and then. Import restores it.
 
 ## Credits
 

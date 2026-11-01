@@ -348,8 +348,6 @@ function customExercise(ps, name, kind) {
     repMax: weighted ? 12 : 0,
     max: !weighted,
     restSec: 90,
-    step: weighted ? 2.5 : 0,
-    progression: weighted ? 'double' : 'none',
     trackBest: true,
     note: '',
   };
@@ -468,7 +466,7 @@ export function editExercise({ sid, exId }) {
   const host = h('section', { class: 'glass list' });
   let vi = 0; // which variant is being edited
 
-  // Sets and rest live on the card; reps, step, progression and target live on the variant or part (or the card).
+  // Sets and rest live on the card; reps and target live on the variant or part (or the card).
   const targets = () => {
     if (card.parts) return card.parts.map((p, i) => ({ obj: p, title: `${'AB'[i]} · ${p.name}` }));
     if (card.variants) return [{ obj: card.variants[vi], title: null }];
@@ -504,50 +502,25 @@ export function editExercise({ sid, exId }) {
   const kindRows = (obj) => {
     const kind = kindOf(obj);
     const out = [];
-    if (kind === 'pullup' || kind === 'easy') {
-      out.push(num2('Clean reps', obj, 'repMin', { max: 30, after: (v) => (obj.repMax = v) }));
-    } else if (kind === 'weighted') {
+    if (kind === 'weighted') {
       out.push(
-        num2('Reps from', obj, 'repMin', {
+        num2('Target reps from', obj, 'repMin', {
           max: 50,
-          redraw: true,
           after: (v) => {
-            if (get(obj, 'repMax') < v || get(obj, 'progression') === 'fixed') obj.repMax = v;
+            if (get(obj, 'repMax') < v) obj.repMax = v;
           },
         }),
       );
-      if (get(obj, 'progression') !== 'fixed') out.push(num2('Reps up to', obj, 'repMax', { min: get(obj, 'repMin'), max: 50 }));
-      out.push(num2('Weight step, kg', obj, 'step', { step: 0.5, min: 0.5, max: 20, decimal: true }));
-      out.push(
-        stack(
-          'Progression',
-          segmented({
-            label: 'Progression',
-            options: [
-              { value: 'double', label: 'Rep range' },
-              { value: 'fixed', label: 'Fixed reps' },
-              { value: 'none', label: 'Off' },
-            ],
-            value: get(obj, 'progression'),
-            onChange: (v) => {
-              obj.progression = v;
-              if (v === 'fixed') obj.repMax = get(obj, 'repMin');
-              else if (v === 'double' && get(obj, 'repMax') <= get(obj, 'repMin')) obj.repMax = get(obj, 'repMin') + 2;
-              persist();
-              draw();
-            },
-          }),
-        ),
-      );
+      out.push(num2('Target reps up to', obj, 'repMax', { min: get(obj, 'repMin'), max: 50 }));
     } else {
-      const unit = kind === 'time' ? 'Seconds' : 'Reps';
+      const unit = kind === 'time' ? 'Seconds' : 'Target reps';
       out.push(
         stack(
           'Target',
           segmented({
             label: 'Target',
             options: [
-              { value: 'max', label: 'Max' },
+              { value: 'max', label: 'To failure' },
               { value: 'fixed', label: 'Fixed' },
             ],
             value: get(obj, 'max') ? 'max' : 'fixed',

@@ -1,0 +1,10 @@
+{
+  "name": "setlog-tools",
+  "private": true,
+  "type": "module",
+  "description": "Developer tools only. The app itself has no build step.",
+  "dependencies": {
+    "@napi-rs/canvas": "0.1.65",
+    "gifenc": "1.0.3"
+  }
+}

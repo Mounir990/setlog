@@ -7,12 +7,12 @@
 //   bodyweight: [ { date, kg } ]
 // }
 //
-// Bests, rotation, weekly counts and progression goals are derived from `sessions` (see progression.js).
+// Bests, rotation and weekly counts are derived from `sessions` (see progression.js).
 
 import { defaultPlan, DEFAULT_REST } from './plan.js';
 
 const KEY = 'setlog.data';
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 // MIGRATIONS[n] upgrades a version n document to version n + 1. A step must never throw on odd data.
 const MIGRATIONS = {
@@ -43,8 +43,44 @@ const MIGRATIONS = {
       }
     }
     d.sessions = sessions;
-    // Keep the old plan so nothing is lost, and make the new program the active plan.
+    // Keep the old plan so nothing is lost. The current program is installed by the last step.
     if (oldPlan && !d.archive) d.archive = { plan: oldPlan, archivedAt: Date.now(), fromVersion: 1 };
+    d.plan = { sessions: [] };
+    return d;
+  },
+
+  // Version 2 -> 3: weight suggestions removed (no `step`, no `progression`), Pull day with pull-ups,
+  // back extension without a machine variant. Every logged set stays; the old plan is archived.
+  2(d) {
+    const oldPlan = d.plan && Array.isArray(d.plan.sessions) && d.plan.sessions.length ? d.plan : null;
+    // Same movement under a new key keeps its history.
+    const MAP = { 'back-extension-free': 'back-extension' };
+    const rename = (o) => {
+      if (o && MAP[o.key]) o.key = MAP[o.key];
+      if (o && MAP[o.slug]) o.slug = MAP[o.slug];
+    };
+    const strip = (card) => {
+      if (!card || typeof card !== 'object') return;
+      delete card.step;
+      delete card.progression;
+      for (const list of [card.variants, card.parts]) {
+        if (Array.isArray(list)) for (const x of list) if (x && typeof x === 'object') (delete x.step, delete x.progression, rename(x));
+      }
+      rename(card);
+    };
+    for (const s of Array.isArray(d.sessions) ? d.sessions : []) {
+      if (!s || typeof s !== 'object') continue;
+      if (Array.isArray(s.sets)) for (const x of s.sets) if (x && MAP[x.exerciseKey]) x.exerciseKey = MAP[x.exerciseKey];
+      if (Array.isArray(s.exercises)) s.exercises.forEach(strip);
+      if (s.variants && typeof s.variants === 'object') {
+        for (const k of Object.keys(s.variants)) if (MAP[s.variants[k]]) s.variants[k] = MAP[s.variants[k]];
+      }
+    }
+    if (oldPlan) {
+      for (const ps of oldPlan.sessions) if (ps && Array.isArray(ps.exercises)) ps.exercises.forEach(strip);
+      // The version 1 archive, if any, stays reachable inside the new one.
+      d.archive = { plan: oldPlan, archivedAt: Date.now(), fromVersion: 2, ...(d.archive ? { previous: d.archive } : {}) };
+    }
     d.plan = defaultPlan();
     return d;
   },

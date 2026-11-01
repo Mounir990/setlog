@@ -1,10 +1,10 @@
-// Everything derived from logged data: history, prefill, hints, bests, rotation, weekly counts.
+// Everything derived from logged data: history, prefill, bests, rotation, weekly counts.
+// The app never suggests a weight or a rep count: it only replays what was entered.
 // Nothing here is stored; it is recomputed from `data.sessions` and `data.plan`.
 
 import { rotationOrder, flatten } from './plan.js';
 
 export const DAY = 86400000;
-const round2 = (n) => Math.round(n * 100) / 100;
 
 export const doneSessions = (d) =>
   d.sessions.filter((s) => s.status === 'done').sort((a, b) => b.finishedAt - a.finishedAt);
@@ -42,13 +42,14 @@ export function currentExercise(session) {
   return open.find((e) => exerciseState(session, e).logged > 0) || open[0] || null;
 }
 
-// ---- Prefill and hints ----
+// ---- Prefill ----
 
 function defaults(ex) {
   switch (ex.kind) {
     case 'weighted':
       return ex.dropset ? { weight: 0, reps: ex.repMin, drops: [] } : { weight: 0, reps: ex.repMin };
     case 'pullup':
+      return { cleanReps: ex.repMin || 5, partialReps: 0, weight: 0 };
     case 'easy':
       return { cleanReps: ex.repMin, partialReps: 0 };
     case 'time':
@@ -68,91 +69,31 @@ export function setValues(ex, s) {
   return out;
 }
 
-// Weight of a new drop: about 20% lighter than the entry before, rounded to the step, always lighter.
-export function dropWeight(ex, previous) {
-  const step = ex.step || 1;
-  let w = Math.round((previous * 0.8) / step) * step;
-  if (w >= previous) w = previous - step;
-  return Math.max(0, round2(w));
-}
-
-// Values for the stepper of a given set: same set number of the last session, else the plan default.
-// Within a session, the weight of the previous set carries over so a weight change is entered once.
+// Starting values for the fields of a given set: the same set number of the last session (and variant),
+// else the plan default. Within a session the weight of the previous set carries over, so a change of weight
+// is typed once. These are only a starting point; every field stays editable.
 export function prefill(d, session, ex, setIndex) {
   const last = historyFor(d, ex.key, session.id)[0];
   let v = defaults(ex);
   if (last) {
     const base = last.sets.find((s) => s.setIndex === setIndex) || last.sets[last.sets.length - 1];
     v = setValues(ex, base);
-    if (ex.kind === 'pullup' && base.weight > 0) v.weight = base.weight;
   }
-  if (ex.kind === 'pullup') {
-    // Once the ladder reaches the weighted stage, start from the goal (for example 5 x 4 at +2.5 kg).
-    const g = pullupGoal(d, ex, session.id);
-    if (g.weight > (v.weight || 0)) {
-      v.weight = g.weight;
-      v.cleanReps = g.reps;
-    }
-  }
-  if (ex.kind === 'weighted') {
+  if ('weight' in v) {
     const prev = setsOfKey(session, ex)
       .filter((s) => s.setIndex < setIndex)
       .pop();
-    if (prev) {
-      // A heavier weight than last time starts again from the low end of the range.
-      if (last && prev.weight > v.weight) v.reps = ex.repMin;
-      v.weight = prev.weight;
-    }
+    if (prev && typeof prev.weight === 'number') v.weight = prev.weight;
   }
   return v;
 }
 
-// ---- Strict pull-up ladder ----
-
-// Goal is 5 sets of N clean reps, starting at N = 4. When every set reaches N, the goal becomes N + 1.
-// After 5 x 6 is completed, the next goal is weighted pull-ups: +2.5 kg with the target reset to 5 x 4.
-export function pullupGoal(d, ex, excludeId) {
-  const base = ex.repMin || 4;
-  const hist = historyFor(d, ex.key, excludeId).slice().reverse(); // oldest first
-  let n = base;
-  let w = 0;
-  let before = { n, w };
-  let changed = false;
-  for (const { sets } of hist) {
-    before = { n, w };
-    const need = sets.slice(0, ex.sets);
-    const ok = need.length >= ex.sets && need.every((s) => s.cleanReps >= n && (s.weight || 0) >= w);
-    changed = ok;
-    if (ok) {
-      if (n >= 6) {
-        n = base;
-        w = round2(w + 2.5);
-      } else {
-        n += 1;
-      }
-    }
-  }
-  const lastSets = hist.length ? hist[hist.length - 1].sets : [];
-  const lastAt = Math.max(0, ...lastSets.map((s) => s.completedAt || 0));
-  // Gap rule: after more than 10 days away, do not raise the goal.
-  if (changed && Date.now() - lastAt > 10 * DAY) return { sets: ex.sets, reps: before.n, weight: before.w };
-  return { sets: ex.sets, reps: n, weight: w };
-}
-
 export const hasHistory = (d, session, ex) => historyFor(d, ex.key, session.id).length > 0;
 
-// Double progression hint: weight to try next, or null.
-export function tryWeight(d, session, ex) {
-  if (ex.kind !== 'weighted' || ex.progression === 'none' || !ex.step) return null;
+// Sets of the last session that logged this exercise (and variant), for the "Last time" line. Null if none.
+export function lastTime(d, session, ex) {
   const last = historyFor(d, ex.key, session.id)[0];
-  if (!last || last.sets.length < ex.sets) return null;
-  const sets = last.sets.slice(0, ex.sets);
-  const w = sets[sets.length - 1].weight || 0;
-  if (!sets.every((s) => (s.weight || 0) === w && s.reps >= ex.repMax)) return null;
-  // Gap rule: after more than 10 days away, never suggest an increase.
-  const latest = Math.max(...sets.map((s) => s.completedAt || 0));
-  if (Date.now() - latest > 10 * DAY) return null;
-  return round2(w + ex.step);
+  return last ? last.sets : null;
 }
 
 // ---- Bests ----

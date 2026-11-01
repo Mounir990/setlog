@@ -349,24 +349,6 @@ button.row:active {
   font-weight: 500;
   white-space: nowrap;
 }
-.hint {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 2px 11px;
-  font-size: var(--fs-caption);
-  color: var(--amber);
-  border: 0.5px solid rgba(255, 176, 32, 0.75);
-  border-radius: var(--pill-r);
-  position: relative;
-}
-/* Keep the hit area at 44px without growing the pill. */
-.hint::after {
-  content: '';
-  position: absolute;
-  inset: -8px -6px;
-}
-
 /* ---- Steppers ---- */
 
 .fields {

@@ -4,19 +4,16 @@ import { h } from '../dom.js';
 import { icon } from '../icons.js';
 import { data, notify } from '../store.js';
 import { back } from '../router.js';
-import { setSummary, bestShort } from '../format.js';
+import { setSummary, bestShort, lastTimeLine } from '../format.js';
 import { flatten, resolve } from '../plan.js';
 import {
   setsOf,
   prefill,
   setValues,
   hasHistory,
-  tryWeight,
+  lastTime,
   bestFor,
-  pullupGoal,
-  historyFor,
   chosenKey,
-  dropWeight,
 } from '../progression.js';
 import { logSet, updateSet, deleteSet, setVariant } from '../actions.js';
 import * as rest from '../rest.js';
@@ -31,19 +28,25 @@ let editing = null;
 const draftKey = (sid, ex, i) => `${sid}:${ex.id}:${i}:${ex.key}`;
 const copy = (v) => ({ ...v, ...(v.drops ? { drops: v.drops.map((x) => ({ ...x })) } : {}) });
 
-function fieldsFor(ex, weightedPullups) {
+// Fixed increments for the +/- buttons: 2.5 kg for weights, 1 rep. Any value can be typed instead.
+const KG_STEP = 2.5;
+
+function fieldsFor(ex) {
   switch (ex.kind) {
     case 'pullup':
+      return [
+        { label: 'Clean', prop: 'cleanReps' },
+        { label: 'Partial', prop: 'partialReps' },
+        { label: 'Added kg', prop: 'weight', step: KG_STEP, decimal: true },
+      ];
     case 'easy':
       return [
         { label: 'Clean', prop: 'cleanReps' },
         { label: 'Partial', prop: 'partialReps' },
-        // Added weight appears once the pull-up ladder reaches the weighted stage.
-        ...(weightedPullups ? [{ label: 'Added kg', prop: 'weight', step: 2.5, decimal: true }] : []),
       ];
     case 'weighted':
       return [
-        { label: ex.bodyweight ? 'Added kg' : 'kg', prop: 'weight', step: ex.step || 1, decimal: true },
+        { label: ex.bodyweight ? 'Added kg' : 'kg', prop: 'weight', step: KG_STEP, decimal: true },
         { label: 'Reps', prop: 'reps' },
       ];
     case 'time':
@@ -106,18 +109,12 @@ export function exercise({ sid, exId }) {
     return drafts.get(k);
   };
 
-  const weightedPullups = (fx) =>
-    fx.kind === 'pullup' &&
-    (pullupGoal(d, fx, session.id).weight > 0 ||
-      historyFor(d, fx.key, session.id).some((x) => x.sets.some((s) => s.weight > 0)) ||
-      session.sets.some((s) => s.exerciseKey === fx.key && s.weight > 0));
-
-  const steppers = (fx, draft, onWeightChange) => {
-    const wp = weightedPullups(fx);
+  const steppers = (fx, draft) => {
+    const fields = fieldsFor(fx);
     return h(
       'div',
-      { class: 'fields' + (wp ? ' wrap' : '') },
-      fieldsFor(fx, wp).map((f) =>
+      { class: 'fields' + (fields.length > 2 ? ' wrap' : '') },
+      fields.map((f) =>
         stepper({
           label: f.label,
           value: draft[f.prop],
@@ -125,7 +122,6 @@ export function exercise({ sid, exId }) {
           decimal: f.decimal,
           onChange: (v) => {
             draft[f.prop] = v;
-            if (f.prop === 'weight' && onWeightChange) onWeightChange();
           },
         }),
       ),
@@ -149,7 +145,7 @@ export function exercise({ sid, exId }) {
         h(
           'div',
           { class: 'fields' },
-          stepper({ label: 'kg', value: dr.weight, step: fx.step || 1, decimal: true, onChange: (v) => (dr.weight = v) }),
+          stepper({ label: 'kg', value: dr.weight, step: KG_STEP, decimal: true, onChange: (v) => (dr.weight = v) }),
           stepper({ label: 'Reps', value: dr.reps, onChange: (v) => (dr.reps = v) }),
         ),
       ),
@@ -163,7 +159,7 @@ export function exercise({ sid, exId }) {
               type: 'button',
               onclick: () => {
                 const prev = drops.length ? drops[drops.length - 1] : draft;
-                drops.push({ weight: dropWeight(fx, prev.weight), reps: prev.reps });
+                drops.push({ weight: prev.weight, reps: prev.reps });
                 notify();
               },
             },
@@ -174,55 +170,20 @@ export function exercise({ sid, exId }) {
     return h('div', { class: 'drops' }, rows, add);
   };
 
-  const hintFor = (fx, draft) => {
-    const w = tryWeight(d, session, fx);
-    if (!w) return null;
-    const btn = h(
-      'button',
-      {
-        class: 'hint',
-        type: 'button',
-        onclick: () => {
-          draft.weight = w;
-          draft.reps = fx.repMin;
-          notify();
-        },
-      },
-      fx.bodyweight ? `Try +${w}` : `Try ${w}`,
-    );
-    btn.hidden = !(draft.weight < w);
-    return { btn, w };
-  };
-
-  // One part of an editor: header (title, hint), steppers, drops.
-  const block = (fx, draft, { title }) => {
-    const hint = hintFor(fx, draft);
-    const body = steppers(fx, draft, () => {
-      if (hint) hint.btn.hidden = !(draft.weight < hint.w);
-    });
-    return h(
-      'div',
-      { class: 'part' },
-      title || hint ? h('div', { class: 'block-head' }, title ? h('span', { class: 'label' }, title) : null, hint ? hint.btn : null) : null,
-      body,
-      dropsBlock(fx, draft),
-    );
-  };
+  // One part of an editor: optional title, fields, drops.
+  const block = (fx, draft, { title }) =>
+    h('div', { class: 'part' }, title ? h('div', { class: 'block-head' }, h('span', { class: 'label' }, title)) : null, steppers(fx, draft), dropsBlock(fx, draft));
 
   const editorShell = (i, head, children, extra) =>
     h('div', { class: 'set-editor' }, head, ...children, extra || null);
 
-  const activeHead = (i, hint) =>
-    h('div', { class: 'head' }, h('div', { class: 'left' }, h('span', { class: 'amber medium' }, isSuper ? `Round ${i}` : `Set ${i}`), hint || null), h('span', { class: 'ring' }));
+  const activeHead = (i) =>
+    h('div', { class: 'head' }, h('div', { class: 'left' }, h('span', { class: 'amber medium' }, isSuper ? `Round ${i}` : `Set ${i}`)), h('span', { class: 'ring' }));
 
   const activeRow = (i) => {
     if (!isSuper) {
       const draft = draftFor(ex, i);
-      const hint = hintFor(ex, draft);
-      const body = steppers(ex, draft, () => {
-        if (hint) hint.btn.hidden = !(draft.weight < hint.w);
-      });
-      return editorShell(i, activeHead(i, hint && hint.btn), [body, dropsBlock(ex, draft)]);
+      return editorShell(i, activeHead(i), [steppers(ex, draft), dropsBlock(ex, draft)]);
     }
     const entry = byIdx.get(i) || {};
     const part = (fx, label, done) =>
@@ -307,6 +268,15 @@ export function exercise({ sid, exId }) {
     }
     return setSummary(ex, prefill(d, session, ex, i));
   };
+
+  // "Last time: 60 kg x 8, 8". Only what was typed before, never a suggestion.
+  const lastLines = (isSuper ? [partA, partB] : [ex])
+    .map((fx, i) => {
+      const sets = lastTime(d, session, fx);
+      return sets ? `${isSuper ? 'AB'[i] + ' ' : ''}${lastTimeLine(fx, sets)}` : null;
+    })
+    .filter(Boolean);
+  const lastEl = lastLines.length ? h('p', { class: 'last-time sec muted' }, `Last time: ${lastLines.join('  ·  ')}`) : null;
 
   const label = isSuper ? 'Round' : 'Set';
   const rows = [];
@@ -426,6 +396,7 @@ export function exercise({ sid, exId }) {
     variantSwitch,
     (isSuper ? card.note : ex.note) ? h('p', { class: 'note' }, isSuper ? card.note : ex.note) : null,
     mediaBox(activePart),
+    lastEl,
     h('section', { class: 'glass list' }, rows),
     h('div', { class: 'bottom' }, bottom),
   );

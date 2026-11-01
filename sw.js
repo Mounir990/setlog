@@ -2,7 +2,7 @@
 // Strategy: network first (short timeout) so a new deploy shows up on the next open,
 // falling back to the cache when offline or slow. Bump CACHE when the file list changes.
 
-const CACHE = 'setlog-v5';
+const CACHE = 'setlog-v6';
 
 const ASSETS = [
   './',
@@ -38,6 +38,27 @@ const ASSETS = [
   'icons/icon-512.png',
   'icons/apple-touch-icon.png',
   'media/exercises/index.json',
+  'media/exercises/incline-machine-press.gif',
+  'media/exercises/cable-lateral-raise.gif',
+  'media/exercises/bench-press-free.gif',
+  'media/exercises/bench-press-guided.gif',
+  'media/exercises/shoulder-press-machine.gif',
+  'media/exercises/dips.gif',
+  'media/exercises/skullcrusher-cable.gif',
+  'media/exercises/skullcrusher-free.gif',
+  'media/exercises/triceps-pushdown-one-hand.gif',
+  'media/exercises/pull-ups-wide.gif',
+  'media/exercises/pull-ups-narrow.gif',
+  'media/exercises/cable-rear-delt-fly.gif',
+  'media/exercises/rowing-machine-wide.gif',
+  'media/exercises/back-extension.gif',
+  'media/exercises/incline-biceps-curl.gif',
+  'media/exercises/hammer-curl.gif',
+  'media/exercises/standing-calf-raise.gif',
+  'media/exercises/seated-calf-raise.gif',
+  'media/exercises/hex-squat.gif',
+  'media/exercises/lying-leg-curl.gif',
+  'media/exercises/leg-extension.gif',
 ];
 
 self.addEventListener('install', (event) => {

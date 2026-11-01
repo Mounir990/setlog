@@ -360,6 +360,8 @@ Object.assign(SPECS, {
   },
 });
 
+SPECS['back-extension'] = SPECS['back-extension-free'];
+
 // Dead hang is a front view: arms straight, then the shoulders pull down a little and relax.
 const deadHang = `
   <svg viewBox="0 0 360 240" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -390,5 +392,6 @@ export const FIGURES = Object.fromEntries([
   ['dead-hang', () => deadHang],
 ]);
 
-// For the dev preview page only.
+// Used by scripts/make-gifs.mjs (renders the exercise GIFs from these same poses).
 export const FIGURE_SPECS = SPECS;
+export { solve, dir, add, HEAD_R };

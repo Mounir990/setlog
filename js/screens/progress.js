@@ -4,7 +4,7 @@ import { h } from '../dom.js';
 import { icon } from '../icons.js';
 import { data, notify, persist } from '../store.js';
 import { go, back } from '../router.js';
-import { num, bestShort, bestLong, dayLabel, sessionSummary, goalLabel } from '../format.js';
+import { num, bestShort, bestLong, dayLabel, sessionSummary } from '../format.js';
 import {
   weekCount,
   progressGroups,
@@ -14,7 +14,6 @@ import {
   metricLabel,
   bestFor,
   historyFor,
-  pullupGoal,
   latestBodyweight,
   DAY,
 } from '../progression.js';
@@ -176,7 +175,6 @@ export function exerciseProgress({ key }) {
 
   const series = metricSeries(d, ex);
   const best = bestFor(d, ex);
-  const goal = ex.progression === 'strict' ? pullupGoal(d, ex) : null;
   const recent = historyFor(d, ex.key).slice(0, 6);
 
   const el = h(
@@ -188,9 +186,6 @@ export function exerciseProgress({ key }) {
     switcher,
     periodSwitch(),
     h('section', { class: 'glass card compact' }, h('div', { class: 'label' }, metricLabel(ex)), lineChart(filterPeriod(series), `${ex.name} trend`)),
-    goal
-      ? h('section', { class: 'glass card compact between' }, h('span', {}, 'Next goal'), h('span', { class: 'amber medium' }, goalLabel(goal)))
-      : null,
     recent.length
       ? h(
           'section',
