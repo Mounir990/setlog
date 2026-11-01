@@ -12,7 +12,7 @@
 import { defaultPlan, DEFAULT_REST } from './plan.js';
 
 const KEY = 'setlog.data';
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 // MIGRATIONS[n] upgrades a version n document to version n + 1. A step must never throw on odd data.
 const MIGRATIONS = {
@@ -85,28 +85,39 @@ const MIGRATIONS = {
     return d;
   },
 
-  // Version 3 -> 4: the calf-raise superset becomes a plain "Standing calf raise". Only that card of the stored
-  // plan is replaced (your own edits elsewhere stay); sets and rest of the old card are kept. Logged sets stay;
-  // seated calf raise history appears in Progress as archived. An open session keeps its own copy of the card.
+  // Version 3 -> 4: the calf-raise superset becomes a plain "Standing calf raise".
   3(d) {
-    if (!d.plan || !Array.isArray(d.plan.sessions)) return d;
-    const fresh = defaultPlan()
-      .sessions.flatMap((ps) => ps.exercises)
-      .find((e) => e.key === 'standing-calf-raise');
-    for (const ps of d.plan.sessions) {
-      if (!ps || !Array.isArray(ps.exercises) || !fresh) continue;
-      ps.exercises = ps.exercises.map((card) => {
-        if (!card || !Array.isArray(card.parts) || !card.parts.some((p) => p && p.key === 'seated-calf-raise')) return card;
-        const next = structuredClone(fresh);
-        next.id = `${ps.id}.${fresh.slug}`;
-        if (typeof card.sets === 'number') next.sets = card.sets;
-        if (typeof card.restSec === 'number') next.restSec = card.restSec;
-        return next;
-      });
-    }
-    return d;
+    return swapCards(d, (card) => Array.isArray(card.parts) && card.parts.some((p) => p && p.key === 'seated-calf-raise'), 'standing-calf-raise');
+  },
+
+  // Version 4 -> 5: Skullcrusher is one plain exercise (barbell); the cable variant is gone.
+  4(d) {
+    return swapCards(d, (card) => Array.isArray(card.variants) && card.variants.some((v) => v && v.key === 'skullcrusher-cable'), 'skullcrusher-free');
   },
 };
+
+// Replaces cards of the stored plan that match `isOld` with the default card for `key`. Only those cards change
+// (your own edits elsewhere stay); the old card's sets and rest are kept. Logged sets are never touched, and an
+// open session keeps its own copy of its cards. History of exercises that left the plan shows as archived.
+function swapCards(d, isOld, key) {
+  if (!d.plan || !Array.isArray(d.plan.sessions)) return d;
+  const fresh = defaultPlan()
+    .sessions.flatMap((ps) => ps.exercises)
+    .find((e) => e.key === key);
+  if (!fresh) return d;
+  for (const ps of d.plan.sessions) {
+    if (!ps || !Array.isArray(ps.exercises)) continue;
+    ps.exercises = ps.exercises.map((card) => {
+      if (!card || typeof card !== 'object' || !isOld(card)) return card;
+      const next = structuredClone(fresh);
+      next.id = `${ps.id}.${fresh.slug}`;
+      if (typeof card.sets === 'number') next.sets = card.sets;
+      if (typeof card.restSec === 'number') next.restSec = card.restSec;
+      return next;
+    });
+  }
+  return d;
+}
 
 export function freshData() {
   return {

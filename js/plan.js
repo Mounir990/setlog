@@ -70,15 +70,7 @@ const TEMPLATES = {
       ),
       plain('shoulder-press-machine', 'Shoulder press machine', { repMin: 8, repMax: 12, restSec: 120 }),
       plain('dips', 'Dips', { repMin: 8, repMax: 12, restSec: 120, bodyweight: true, note: 'Bodyweight, optional added kg' }),
-      withVariants(
-        'skullcrusher',
-        'Skullcrusher',
-        [
-          { key: 'skullcrusher-cable', label: 'Cable' },
-          { key: 'skullcrusher-free', label: 'Free' },
-        ],
-        { repMin: 10, repMax: 12, restSec: 90 },
-      ),
+      plain('skullcrusher-free', 'Skullcrusher', { repMin: 10, repMax: 12, restSec: 90, note: 'Barbell' }),
       plain('triceps-pushdown-one-hand', 'Triceps pushdown, one hand', { repMin: 10, repMax: 15, restSec: 60, note: 'per arm' }),
     ],
   },

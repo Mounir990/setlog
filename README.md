@@ -2,7 +2,7 @@
 
 A personal workout tracker for one user. It guides each training session, logs every set and shows progress per exercise. Vanilla HTML, CSS and JavaScript (ES modules), no framework, no build step, no backend, no accounts. Installable as a PWA and fully offline.
 
-Status: complete. The program is Push day, Pull day, Leg day (a rotation that ignores weekdays), with variants (Free / Guided, Cable / Free), a dropset exercise, pull-ups, one-hand and bodyweight lifts. Old exercises stay in Progress as read-only archived entries.
+Status: complete. The program is Push day, Pull day, Leg day (a rotation that ignores weekdays), with a Free / Guided bench press variant, a dropset exercise, pull-ups, one-hand and bodyweight lifts. Old exercises stay in Progress as read-only archived entries.
 
 The app never suggests a weight or a number of reps. You type what you lifted; Setlog records it and starts the next set from your last session's values, with a "Last time" line to compare.
 
@@ -40,7 +40,7 @@ All app files, the font and the icons are cached on first load, so the app works
 
 ## Exercise animations
 
-Every exercise screen shows a looping animation; tapping it pauses it. Most are your own GIFs, shrunk to phone size by `scripts/convert-gifs.mjs` (cropped to the figure, 560 x 320, about 150 KB each) and cached for offline use. One exercise has no real animation yet and shows a grey mannequin stand-in drawn by `scripts/make-gifs.mjs`: `skullcrusher-cable`. The dips GIF shows the assisted version and the rowing GIF a T-bar row, the closest ones available.
+Every exercise screen shows a looping animation; tapping it pauses it. Most are your own GIFs, shrunk to phone size by `scripts/convert-gifs.mjs` (cropped to the figure, 560 x 320, about 150 KB each) and cached for offline use. Every exercise of the program has a real animation. `scripts/make-gifs.mjs` can still draw a grey mannequin stand-in for a new exercise that has none. The dips GIF shows the assisted version and the rowing GIF a T-bar row, the closest ones available.
 
 To add or replace an animation:
 
@@ -53,7 +53,7 @@ Or do it by hand: put `<slug>.gif` (or `.webp`, `.mp4`) in `media/exercises/`, l
 
 Without a listed file an exercise falls back to the built-in stick figure (`js/stickfigures.js`), and custom exercises show a plain placeholder.
 
-Slugs: `incline-machine-press`, `cable-lateral-raise`, `bench-press-free`, `bench-press-guided`, `shoulder-press-machine`, `dips`, `skullcrusher-cable`, `skullcrusher-free`, `triceps-pushdown-one-hand`, `pull-ups-wide`, `cable-rear-delt-fly`, `rowing-machine-wide`, `pull-ups-narrow`, `back-extension`, `incline-biceps-curl`, `hammer-curl`, `standing-calf-raise`, `hex-squat`, `lying-leg-curl`, `leg-extension`.
+Slugs: `incline-machine-press`, `cable-lateral-raise`, `bench-press-free`, `bench-press-guided`, `shoulder-press-machine`, `dips`, `skullcrusher-free`, `triceps-pushdown-one-hand`, `pull-ups-wide`, `cable-rear-delt-fly`, `rowing-machine-wide`, `pull-ups-narrow`, `back-extension`, `incline-biceps-curl`, `hammer-curl`, `standing-calf-raise`, `hex-squat`, `lying-leg-curl`, `leg-extension`.
 
 ## Program model
 

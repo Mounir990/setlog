@@ -42,7 +42,6 @@ const MUSCLES = {
   'bench-press-guided': { primary: ['chest'], secondary: ['delt', 'arm'] },
   'shoulder-press-machine': { primary: ['delt'], secondary: ['arm'] },
   dips: { primary: ['chest', 'arm'], secondary: ['delt'] },
-  'skullcrusher-cable': { primary: ['arm'] },
   'skullcrusher-free': { primary: ['arm'] },
   'triceps-pushdown-one-hand': { primary: ['arm'] },
   'pull-ups-wide': { primary: ['lats'], secondary: ['arm'] },
