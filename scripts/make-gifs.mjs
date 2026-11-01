@@ -47,7 +47,6 @@ const MUSCLES = {
   'pull-ups-wide': { primary: ['lats'], secondary: ['arm'] },
   'pull-ups-narrow': { primary: ['lats', 'arm'] },
   'cable-rear-delt-fly': { primary: ['delt'], secondary: ['lats'] },
-  'rowing-machine-wide': { primary: ['lats'], secondary: ['delt', 'arm'] },
   'back-extension': { primary: ['lowback', 'glute'], secondary: ['ham'] },
   'incline-biceps-curl': { primary: ['arm'] },
   'hammer-curl': { primary: ['arm', 'forearm'] },

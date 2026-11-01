@@ -40,7 +40,7 @@ All app files, the font and the icons are cached on first load, so the app works
 
 ## Exercise animations
 
-Every exercise screen shows a looping animation; tapping it pauses it. Most are your own GIFs, shrunk to phone size by `scripts/convert-gifs.mjs` (cropped to the figure, 560 x 320, about 150 KB each) and cached for offline use. Two exercises have no real animation yet and show a grey mannequin stand-in drawn by `scripts/make-gifs.mjs`: `dips` and `rowing-machine-wide` (the only GIFs on hand were assisted dips and a T-bar row, which are different exercises). Drop a real GIF with the same slug through `convert-gifs.mjs` (add a MATCH entry for its file name) to replace a stand-in.
+Every exercise screen shows a looping animation; tapping it pauses it. Most are your own GIFs, shrunk to phone size by `scripts/convert-gifs.mjs` (cropped to the figure, 560 x 320, about 150 KB each) and cached for offline use. One exercise has no real animation yet and shows a grey mannequin stand-in drawn by `scripts/make-gifs.mjs`: `dips` (the only GIF on hand was assisted dips, a different exercise). Drop a real GIF with the same slug through `convert-gifs.mjs` (add a MATCH entry for its file name) to replace a stand-in.
 
 To add or replace an animation:
 
@@ -53,7 +53,7 @@ Or do it by hand: put `<slug>.gif` (or `.webp`, `.mp4`) in `media/exercises/`, l
 
 Without a listed file an exercise falls back to the built-in stick figure (`js/stickfigures.js`), and custom exercises show a plain placeholder.
 
-Slugs: `incline-machine-press`, `cable-lateral-raise`, `bench-press-free`, `bench-press-guided`, `shoulder-press-machine`, `dips`, `skullcrusher-free`, `triceps-pushdown-one-hand`, `pull-ups-wide`, `cable-rear-delt-fly`, `rowing-machine-wide`, `pull-ups-narrow`, `back-extension`, `incline-biceps-curl`, `hammer-curl`, `standing-calf-raise`, `hex-squat`, `lying-leg-curl`, `leg-extension`.
+Slugs: `incline-machine-press`, `cable-lateral-raise`, `bench-press-free`, `bench-press-guided`, `shoulder-press-machine`, `dips`, `skullcrusher-free`, `triceps-pushdown-one-hand`, `pull-ups-wide`, `cable-rear-delt-fly`, `pull-ups-narrow`, `back-extension`, `incline-biceps-curl`, `hammer-curl`, `standing-calf-raise`, `hex-squat`, `lying-leg-curl`, `leg-extension`.
 
 ## Program model
 

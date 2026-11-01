@@ -12,7 +12,7 @@
 import { defaultPlan, DEFAULT_REST } from './plan.js';
 
 const KEY = 'setlog.data';
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 // MIGRATIONS[n] upgrades a version n document to version n + 1. A step must never throw on odd data.
 const MIGRATIONS = {
@@ -94,7 +94,21 @@ const MIGRATIONS = {
   4(d) {
     return swapCards(d, (card) => Array.isArray(card.variants) && card.variants.some((v) => v && v.key === 'skullcrusher-cable'), 'skullcrusher-free');
   },
+
+  // Version 5 -> 6: the rowing machine leaves the program. Its history stays, archived in Progress.
+  5(d) {
+    return removeCards(d, (card) => card.key === 'rowing-machine-wide' || (Array.isArray(card.variants) && card.variants.some((v) => v && v.key === 'rowing-machine-wide')));
+  },
 };
+
+// Removes cards of the stored plan that match `isOld`. Logged sets are never touched.
+function removeCards(d, isOld) {
+  if (!d.plan || !Array.isArray(d.plan.sessions)) return d;
+  for (const ps of d.plan.sessions) {
+    if (ps && Array.isArray(ps.exercises)) ps.exercises = ps.exercises.filter((card) => !(card && typeof card === 'object' && isOld(card)));
+  }
+  return d;
+}
 
 // Replaces cards of the stored plan that match `isOld` with the default card for `key`. Only those cards change
 // (your own edits elsewhere stay); the old card's sets and rest are kept. Logged sets are never touched, and an

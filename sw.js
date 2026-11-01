@@ -2,7 +2,7 @@
 // Strategy: network first (short timeout) so a new deploy shows up on the next open,
 // falling back to the cache when offline or slow. Bump CACHE when the file list changes.
 
-const CACHE = 'setlog-v10';
+const CACHE = 'setlog-v11';
 
 const ASSETS = [
   './',
@@ -49,7 +49,6 @@ const ASSETS = [
   'media/exercises/pull-ups-wide.gif',
   'media/exercises/pull-ups-narrow.gif',
   'media/exercises/cable-rear-delt-fly.gif',
-  'media/exercises/rowing-machine-wide.gif',
   'media/exercises/back-extension.gif',
   'media/exercises/incline-biceps-curl.gif',
   'media/exercises/hammer-curl.gif',

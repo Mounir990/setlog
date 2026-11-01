@@ -80,7 +80,6 @@ const TEMPLATES = {
     exercises: [
       pullups('pull-ups-wide', 'Pull-ups, wide grip'),
       plain('cable-rear-delt-fly', 'Cable rear delt fly', { repMin: 12, repMax: 15, restSec: 60 }),
-      plain('rowing-machine-wide', 'Rowing machine, wide grip', { repMin: 8, repMax: 12, restSec: 120 }),
       pullups('pull-ups-narrow', 'Pull-ups, narrow grip'),
       plain('back-extension', 'Lower back extension', { repMin: 10, repMax: 15, restSec: 90, bodyweight: true, note: 'Bodyweight, optional added kg' }),
       plain('incline-biceps-curl', 'Seated incline biceps curl', { repMin: 10, repMax: 12, restSec: 75 }),
