@@ -53,7 +53,6 @@ const MUSCLES = {
   'incline-biceps-curl': { primary: ['arm'] },
   'hammer-curl': { primary: ['arm', 'forearm'] },
   'standing-calf-raise': { primary: ['calf'] },
-  'seated-calf-raise': { primary: ['calf'] },
   'hex-squat': { primary: ['quad', 'glute'], secondary: ['ham'] },
   'lying-leg-curl': { primary: ['ham'], secondary: ['calf'] },
   'leg-extension': { primary: ['quad'] },

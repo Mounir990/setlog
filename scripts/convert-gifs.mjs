@@ -1,7 +1,7 @@
 // Converts your own exercise GIFs into the small, phone-sized files the app uses.
 //
 //   cd scripts && npm install
-//   node convert-gifs.mjs ~/Downloads        looks in <dir>/Push, <dir>/Pull, <dir>/Legs
+//   node convert-gifs.mjs <folder> [<folder> ...]   every .gif inside each folder (up to 3 levels down)
 //   node convert-gifs.mjs --index            only rewrite media/exercises/index.json
 //
 // Each source GIF is matched to an exercise by a word in its file name (see MATCH below), cropped to
@@ -35,6 +35,8 @@ const MATCH = {
   'curl-haltere-prise-neutre': 'hammer-curl',
   'oiseau-a-la-poulie': 'cable-rear-delt-fly',
   'barre-front': 'skullcrusher-free',
+  'traction-prise-large': 'pull-ups-wide',
+  'developpe-couche-avec-chaines': 'bench-press-free',
   'dips-assiste': 'dips',
   'developpe-couche-convergent': 'bench-press-guided',
   'developpe-incline-machine': 'incline-machine-press',
@@ -164,25 +166,26 @@ function convert(file, slug) {
   return { size: bytes.length, frames: frames.length };
 }
 
-const arg = process.argv[2];
-if (arg === '--index') {
+const args = process.argv.slice(2);
+
+function collect(dir, depth = 0, out = []) {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name);
+    if (statSync(p).isDirectory()) {
+      if (depth < 3) collect(p, depth + 1, out);
+    } else if (name.toLowerCase().endsWith('.gif')) out.push(p);
+  }
+  return out;
+}
+
+if (args[0] === '--index') {
   writeIndex();
-} else if (!arg || !existsSync(arg)) {
-  console.error('Usage: node convert-gifs.mjs <folder with Push, Pull and Legs>');
+} else if (!args.length || !args.every((a) => existsSync(a))) {
+  console.error('Usage: node convert-gifs.mjs <folder> [<folder> ...]   or   --index');
   process.exit(1);
 } else {
-  const files = [];
-  for (const group of ['Push', 'Pull', 'Legs']) {
-    const gdir = join(arg, group);
-    if (!existsSync(gdir)) continue;
-    for (const sub of readdirSync(gdir)) {
-      const sdir = join(gdir, sub);
-      if (!statSync(sdir).isDirectory()) continue;
-      for (const f of readdirSync(sdir)) if (f.toLowerCase().endsWith('.gif')) files.push(join(sdir, f));
-    }
-  }
+  const files = args.flatMap((a) => collect(a));
   let total = 0;
-  const used = new Set();
   for (const file of files) {
     const hit = Object.keys(MATCH).find((k) => file.toLowerCase().includes(k));
     if (!hit) {
@@ -191,7 +194,6 @@ if (arg === '--index') {
     }
     const slug = MATCH[hit];
     const r = convert(file, slug);
-    used.add(slug);
     total += r.size;
     console.log(`${slug}.gif  ${(r.size / 1024).toFixed(0)} KB  ${r.frames} frames`);
   }

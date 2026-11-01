@@ -12,7 +12,7 @@
 import { defaultPlan, DEFAULT_REST } from './plan.js';
 
 const KEY = 'setlog.data';
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 // MIGRATIONS[n] upgrades a version n document to version n + 1. A step must never throw on odd data.
 const MIGRATIONS = {
@@ -82,6 +82,28 @@ const MIGRATIONS = {
       d.archive = { plan: oldPlan, archivedAt: Date.now(), fromVersion: 2, ...(d.archive ? { previous: d.archive } : {}) };
     }
     d.plan = defaultPlan();
+    return d;
+  },
+
+  // Version 3 -> 4: the calf-raise superset becomes a plain "Standing calf raise". Only that card of the stored
+  // plan is replaced (your own edits elsewhere stay); sets and rest of the old card are kept. Logged sets stay;
+  // seated calf raise history appears in Progress as archived. An open session keeps its own copy of the card.
+  3(d) {
+    if (!d.plan || !Array.isArray(d.plan.sessions)) return d;
+    const fresh = defaultPlan()
+      .sessions.flatMap((ps) => ps.exercises)
+      .find((e) => e.key === 'standing-calf-raise');
+    for (const ps of d.plan.sessions) {
+      if (!ps || !Array.isArray(ps.exercises) || !fresh) continue;
+      ps.exercises = ps.exercises.map((card) => {
+        if (!card || !Array.isArray(card.parts) || !card.parts.some((p) => p && p.key === 'seated-calf-raise')) return card;
+        const next = structuredClone(fresh);
+        next.id = `${ps.id}.${fresh.slug}`;
+        if (typeof card.sets === 'number') next.sets = card.sets;
+        if (typeof card.restSec === 'number') next.restSec = card.restSec;
+        return next;
+      });
+    }
     return d;
   },
 };

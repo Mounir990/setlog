@@ -5,6 +5,7 @@
 //   - an exercise with variants (Free / Guided ...): each variant has its own key, so history,
 //     bests and the "Last time" line are never mixed,
 //   - a superset: two parts, A and B, each with its own key. `sets` is then the number of rounds.
+//     (The app supports it, but the default program has none right now.)
 //
 // Fields (on the card, and on a variant or part where they differ):
 //   kind         pullup (clean + partial reps, optional added kg) | easy | weighted | reps | time
@@ -98,15 +99,7 @@ const TEMPLATES = {
     name: 'Leg day',
     kind: 'full',
     exercises: [
-      superset(
-        'calf-raises',
-        'Calf raises',
-        [
-          { key: 'standing-calf-raise', name: 'Standing calf raise' },
-          { key: 'seated-calf-raise', name: 'Seated calf raise' },
-        ],
-        { repMin: 12, repMax: 15, restSec: 60, note: 'Superset: A, then B, then rest' },
-      ),
+      plain('standing-calf-raise', 'Standing calf raise', { repMin: 12, repMax: 15, restSec: 60 }),
       plain('hex-squat', 'Hex squat', { repMin: 6, repMax: 10, restSec: 150, note: 'Hex (trap) bar' }),
       plain('lying-leg-curl', 'Lying leg curl', { repMin: 8, repMax: 12, restSec: 90 }),
       plain('leg-extension', 'Leg extension', { repMin: 10, repMax: 15, restSec: 90 }),

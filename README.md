@@ -2,7 +2,7 @@
 
 A personal workout tracker for one user. It guides each training session, logs every set and shows progress per exercise. Vanilla HTML, CSS and JavaScript (ES modules), no framework, no build step, no backend, no accounts. Installable as a PWA and fully offline.
 
-Status: complete. The program is Push day, Pull day, Leg day (a rotation that ignores weekdays), with variants (Free / Guided, Cable / Free), a dropset exercise, a calf-raise superset, pull-ups, one-hand and bodyweight lifts. Old exercises stay in Progress as read-only archived entries.
+Status: complete. The program is Push day, Pull day, Leg day (a rotation that ignores weekdays), with variants (Free / Guided, Cable / Free), a dropset exercise, pull-ups, one-hand and bodyweight lifts. Old exercises stay in Progress as read-only archived entries.
 
 The app never suggests a weight or a number of reps. You type what you lifted; Setlog records it and starts the next set from your last session's values, with a "Last time" line to compare.
 
@@ -40,24 +40,24 @@ All app files, the font and the icons are cached on first load, so the app works
 
 ## Exercise animations
 
-Every exercise screen shows a looping animation; tapping it pauses it. Most are your own GIFs, shrunk to phone size by `scripts/convert-gifs.mjs` (cropped to the figure, 560 x 320, about 150 KB each) and cached for offline use. Four exercises have no real animation yet and show a grey mannequin stand-in drawn by `scripts/make-gifs.mjs`: `bench-press-free`, `skullcrusher-cable`, `pull-ups-wide`, `seated-calf-raise`. The dips GIF shows the assisted version and the rowing GIF a T-bar row, the closest ones available.
+Every exercise screen shows a looping animation; tapping it pauses it. Most are your own GIFs, shrunk to phone size by `scripts/convert-gifs.mjs` (cropped to the figure, 560 x 320, about 150 KB each) and cached for offline use. One exercise has no real animation yet and shows a grey mannequin stand-in drawn by `scripts/make-gifs.mjs`: `skullcrusher-cable`. The dips GIF shows the assisted version and the rowing GIF a T-bar row, the closest ones available.
 
 To add or replace an animation:
 
 ```bash
 cd scripts && npm install
-node convert-gifs.mjs ~/Downloads     # reads <folder>/Push, Pull, Legs; matching is by file name, see MATCH in the script
+node convert-gifs.mjs <folder> [<folder> ...]   # every .gif inside; matched to an exercise by file name, see MATCH in the script
 ```
 
 Or do it by hand: put `<slug>.gif` (or `.webp`, `.mp4`) in `media/exercises/`, list it in `media/exercises/index.json` (`node convert-gifs.mjs --index` rewrites that list from the folder), then bump `CACHE` in `sw.js`. Files are cached offline when their path is in `ASSETS` there.
 
 Without a listed file an exercise falls back to the built-in stick figure (`js/stickfigures.js`), and custom exercises show a plain placeholder.
 
-Slugs: `incline-machine-press`, `cable-lateral-raise`, `bench-press-free`, `bench-press-guided`, `shoulder-press-machine`, `dips`, `skullcrusher-cable`, `skullcrusher-free`, `triceps-pushdown-one-hand`, `pull-ups-wide`, `cable-rear-delt-fly`, `rowing-machine-wide`, `pull-ups-narrow`, `back-extension`, `incline-biceps-curl`, `hammer-curl`, `standing-calf-raise`, `seated-calf-raise`, `hex-squat`, `lying-leg-curl`, `leg-extension`.
+Slugs: `incline-machine-press`, `cable-lateral-raise`, `bench-press-free`, `bench-press-guided`, `shoulder-press-machine`, `dips`, `skullcrusher-cable`, `skullcrusher-free`, `triceps-pushdown-one-hand`, `pull-ups-wide`, `cable-rear-delt-fly`, `rowing-machine-wide`, `pull-ups-narrow`, `back-extension`, `incline-biceps-curl`, `hammer-curl`, `standing-calf-raise`, `hex-squat`, `lying-leg-curl`, `leg-extension`.
 
 ## Program model
 
-A plan session holds cards (`js/plan.js`). A card is a plain exercise, an exercise with variants (each variant has its own key, so history, bests and the "Last time" line are never mixed) or a superset (two parts, A and B, each with its own history; `sets` counts rounds). Target reps and rest are shown as a reference and are editable in Plan; they drive no logic. A set can carry up to three drop entries that you type yourself (they start from your last drops, or from the main weight); they are stored and shown but never count toward bests. Pull-ups log clean reps, partial reps and optional added kg; only clean reps count for records. The +/- buttons move weights by 2.5 kg and reps by 1; tap a number to type any value.
+A plan session holds cards (`js/plan.js`). A card is a plain exercise, an exercise with variants (each variant has its own key, so history, bests and the "Last time" line are never mixed) or a superset (two parts, A and B, each with its own history; `sets` counts rounds; supported but not used by the default program). Target reps and rest are shown as a reference and are editable in Plan; they drive no logic. A set can carry up to three drop entries that you type yourself (they start from your last drops, or from the main weight); they are stored and shown but never count toward bests. Pull-ups log clean reps, partial reps and optional added kg; only clean reps count for records. The +/- buttons move weights by 2.5 kg and reps by 1; tap a number to type any value.
 
 ## Structure
 
