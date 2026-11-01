@@ -1,4 +1,5 @@
-// Renders media/exercises/<slug>.gif for every exercise of the program.
+// Draws a stand-in media/exercises/<slug>.gif for exercises that have no real animation yet.
+// (Real animations come from scripts/convert-gifs.mjs and win over these: same file name.)
 // A grey mannequin moves between the two poses defined in js/stickfigures.js; the muscles worked are amber.
 //
 //   cd scripts && npm install && node make-gifs.mjs            all exercises
@@ -368,7 +369,4 @@ for (const name of names) {
   made.push(`${name}.gif`);
   console.log(`${name}.gif  ${(size / 1024).toFixed(0)} KB`);
 }
-if (!args.length) {
-  writeFileSync(join(OUT, 'index.json'), JSON.stringify({ files: made }, null, 2) + '\n');
-  console.log(`index.json updated, total ${(total / 1024 / 1024).toFixed(1)} MB`);
-}
+console.log('Run `node convert-gifs.mjs --index` to refresh media/exercises/index.json.');

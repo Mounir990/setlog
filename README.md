@@ -40,19 +40,18 @@ All app files, the font and the icons are cached on first load, so the app works
 
 ## Exercise animations
 
-Every exercise screen shows a looping animation: a grey mannequin with the muscles worked in amber. Tapping it pauses it. The 21 GIFs in `media/exercises/` are drawn by `scripts/make-gifs.mjs` from the same two poses per exercise as the built-in stick figures (`js/stickfigures.js`), so they are our own artwork and are cached for offline use. An exercise without a listed file falls back to the stick figure, and custom exercises show a plain placeholder.
+Every exercise screen shows a looping animation; tapping it pauses it. Most are your own GIFs, shrunk to phone size by `scripts/convert-gifs.mjs` (cropped to the figure, 560 x 320, about 150 KB each) and cached for offline use. Four exercises have no real animation yet and show a grey mannequin stand-in drawn by `scripts/make-gifs.mjs`: `bench-press-free`, `skullcrusher-cable`, `pull-ups-wide`, `seated-calf-raise`. The dips GIF shows the assisted version and the rowing GIF a T-bar row, the closest ones available.
 
-To redraw the GIFs after changing a pose or the style:
+To add or replace an animation:
 
 ```bash
-cd scripts && npm install && node make-gifs.mjs
+cd scripts && npm install
+node convert-gifs.mjs ~/Downloads     # reads <folder>/Push, Pull, Legs; matching is by file name, see MATCH in the script
 ```
 
-To use your own animation for an exercise instead:
+Or do it by hand: put `<slug>.gif` (or `.webp`, `.mp4`) in `media/exercises/`, list it in `media/exercises/index.json` (`node convert-gifs.mjs --index` rewrites that list from the folder), then bump `CACHE` in `sw.js`. Files are cached offline when their path is in `ASSETS` there.
 
-1. Put `<slug>.gif` (or `.webp`, `.mp4`) in `media/exercises/`.
-2. List the file name in `media/exercises/index.json`, for example `{ "files": ["pull-ups-wide.gif"] }`.
-3. For offline use, add its path to `ASSETS` in `sw.js` and bump `CACHE`.
+Without a listed file an exercise falls back to the built-in stick figure (`js/stickfigures.js`), and custom exercises show a plain placeholder.
 
 Slugs: `incline-machine-press`, `cable-lateral-raise`, `bench-press-free`, `bench-press-guided`, `shoulder-press-machine`, `dips`, `skullcrusher-cable`, `skullcrusher-free`, `triceps-pushdown-one-hand`, `pull-ups-wide`, `cable-rear-delt-fly`, `rowing-machine-wide`, `pull-ups-narrow`, `back-extension`, `incline-biceps-curl`, `hammer-curl`, `standing-calf-raise`, `seated-calf-raise`, `hex-squat`, `lying-leg-curl`, `leg-extension`.
 
@@ -76,7 +75,7 @@ js/chart.js           line chart and sparkline
 js/screens/           one file per screen (today, overview, exercise, done, progress, plan)
 sw.js, manifest.webmanifest, icons/
 scripts/make-icons.mjs  regenerates the app icons (not part of the app)
-scripts/make-gifs.mjs   renders the exercise GIFs (developer tool, needs npm install in scripts/)
+scripts/convert-gifs.mjs, make-gifs.mjs   exercise GIF tools (developer only, need npm install in scripts/)
 ```
 
 ## Data
